@@ -671,7 +671,7 @@ details.staff-d .staff-row { background: transparent; }
     provider.setCustomParameters({ prompt: "select_account" });
     firebase.auth().signInWithPopup(provider).catch(err => {
       if (err && (err.code === "auth/popup-blocked" || err.code === "auth/operation-not-supported-in-this-environment")) firebase.auth().signInWithRedirect(provider);
-      else if (err && err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") toast("ログインできませんでした");
+      else if (err && err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") { banner = "ログインできませんでした（" + (err.code || err.message || "不明") + "）。この画面をClaudeに送ってください。"; render(); }
     });
   }
 
@@ -679,7 +679,7 @@ details.staff-d .staff-row { background: transparent; }
     if (!window.SKIRU_CONFIG || !window.firebase) { banner = "設定ファイルが読みこめませんでした。"; booted = true; needLogin = true; render(); return; }
     firebase.initializeApp(SKIRU_CONFIG.firebaseConfig);
     db = firebase.firestore();
-    firebase.auth().getRedirectResult().catch(() => {});
+    firebase.auth().getRedirectResult().catch(err => { banner = "ログインできませんでした（" + ((err && (err.code || err.message)) || "不明") + "）。この画面をClaudeに送ってください。"; render(); });
     let started = false;
     firebase.auth().onAuthStateChanged(async u => {
       if (!u) { authUser = null; needLogin = true; booted = true; render(); return; }

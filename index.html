@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スキる</title>
+<meta name="theme-color" content="#d9642a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="スキる">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-96.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+/* Layout: one phone-width column, dragon "nest" on top, cards below, tab bar fixed at the bottom */
+:root {
+  --bg: #e9f1ee;
+  --panel: #ffffff;
+  --fg: #1d2a28;
+  --muted: #5d6f6b;
+  --line: #d3e0dc;
+  --accent: #d9642a;
+  --accent-soft: #fbe6da;
+  --good: #2f8a57;
+  --warn: #b7791f;
+  --bad: #c2413b;
+  --nest: #d8e8e2;
+  --font-body: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-num: "DotGothic16", "Zen Maru Gothic", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111a1a; --panel: #1a2626; --fg: #e6efec; --muted: #9db0ab; --line: #2c3d3b;
+    --accent: #f08a50; --accent-soft: #3a2a20; --good: #5cc28a; --warn: #e0a84a; --bad: #ec6f68; --nest: #18302c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111a1a; --panel: #1a2626; --fg: #e6efec; --muted: #9db0ab; --line: #2c3d3b;
+  --accent: #f08a50; --accent-soft: #3a2a20; --good: #5cc28a; --warn: #e0a84a; --bad: #ec6f68; --nest: #18302c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-weight: 500; font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.app { max-width: 440px; margin: 0 auto; padding-block: 12px calc(96px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.logo { font-weight: 900; font-size: 26px; letter-spacing: .04em; }
+.logo span { color: var(--accent); }
+.brand { display: flex; align-items: center; gap: 8px; }
+.app-icon { width: 40px; height: 40px; border-radius: 12px; display: block; box-shadow: 0 0 0 1px var(--line); }
+.hero-icon { width: 180px; max-width: 100%; height: auto; border-radius: 32px; display: block; margin: 0 auto; }
+.who { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; flex: none; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
+.badge { font-size: 11px; letter-spacing: .08em; background: var(--accent-soft); color: var(--accent); border-radius: 99px; padding: 2px 8px; font-weight: 700; }
+
+.nest { background: var(--nest); border-radius: 28px; padding: 14px 16px 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; overflow: hidden; }
+.nest svg.dragon { width: 210px; max-width: 100%; height: auto; display: block; }
+.dragon-body { animation: bob 3.2s ease-in-out infinite; transform-origin: 100px 180px; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.grow-fx { animation: grow .9s ease-out; }
+@keyframes grow { 0% { transform: scale(.6); opacity: .4; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dragon-body, .grow-fx { animation: none; } }
+.stage-name { font-weight: 900; font-size: 20px; }
+.stages { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.stages i { width: 26px; height: 6px; border-radius: 3px; background: var(--line); display: block; }
+.stages i.on { background: var(--dc, var(--accent)); }
+.streak { font-size: 13px; color: var(--muted); }
+.streak b { font-family: var(--font-num); font-weight: 400; color: var(--fg); font-size: 16px; }
+
+.card { background: var(--panel); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--line); }
+.card h2 { margin: 0; font-size: 16px; font-weight: 900; text-wrap: balance; }
+.card .sub { margin: 0; font-size: 13px; color: var(--muted); }
+
+.counter { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.ring { width: 112px; height: 112px; position: relative; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ring .num b { font-family: var(--font-num); font-weight: 400; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.ring .num small { font-size: 11px; color: var(--muted); }
+.verdict { font-weight: 700; font-size: 14px; }
+.verdict.good { color: var(--good); } .verdict.warn { color: var(--warn); } .verdict.bad { color: var(--bad); }
+
+.items { display: flex; flex-direction: column; gap: 8px; }
+.item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--bg); }
+.item .label { min-width: 0; font-weight: 700; font-size: 14px; }
+.item .label small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+.stepper { display: flex; align-items: center; gap: 4px; }
+.stepper input { width: 64px; text-align: center; font-family: var(--font-num); font-size: 20px; border: 2px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 10px; padding: 6px 2px; }
+.stepper input:focus { border-color: var(--accent); }
+.stepper input[type=number] { width: 64px; flex: none; }
+button { white-space: nowrap; font-family: inherit; font-weight: 700; cursor: pointer; border: none; border-radius: 12px; color: var(--fg); background: var(--bg); padding: 8px 12px; font-size: 14px; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.mini { padding: 6px 9px; font-size: 13px; background: var(--panel); border: 1px solid var(--line); }
+.primary { background: var(--accent); color: #fff; padding: 12px 16px; font-size: 15px; border-radius: 14px; }
+.primary:disabled { opacity: .45; cursor: default; }
+.ghost { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
+
+.task { border-radius: 16px; padding: 14px; background: var(--accent-soft); display: flex; flex-direction: column; gap: 6px; }
+.task .el { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .06em; }
+.task p { margin: 0; font-weight: 700; font-size: 16px; }
+
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg button { background: var(--bg); border: 1px solid var(--line); padding: 10px 4px; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+textarea, input[type=text], input[type=email], input[type=number], select { width: 100%; font-family: inherit; font-size: 15px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+textarea { min-height: 70px; resize: vertical; }
+.rate { display: grid; grid-template-columns: 7.5em 1fr 1.5em; align-items: center; gap: 10px; font-size: 14px; }
+.rate input { accent-color: var(--accent); width: 100%; }
+.rate b { font-family: var(--font-num); font-weight: 400; font-size: 18px; text-align: right; }
+
+.edit-row { display: grid; grid-template-columns: 1fr 64px auto; gap: 6px; align-items: center; }
+.sum { font-size: 13px; color: var(--muted); }
+.sum b { font-family: var(--font-num); font-weight: 400; font-size: 17px; color: var(--fg); }
+.sum.off b { color: var(--bad); }
+
+.colors { display: flex; flex-wrap: wrap; gap: 10px; }
+.colors button { width: 36px; height: 36px; border-radius: 50%; padding: 0; border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
+.colors button[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--fg); }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+
+.staff { display: flex; flex-direction: column; gap: 8px; }
+.staff-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 14px; background: var(--bg); }
+.staff-row svg { width: 44px; height: 44px; }
+.staff-row .nm { min-width: 0; font-weight: 700; font-size: 14px; }
+.staff-row .nm small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill { font-family: var(--font-num); font-size: 16px; padding: 2px 10px; border-radius: 99px; font-variant-numeric: tabular-nums; }
+.pill.good { background: color-mix(in oklab, var(--good) 18%, transparent); color: var(--good); }
+.pill.warn { background: color-mix(in oklab, var(--warn) 18%, transparent); color: var(--warn); }
+.pill.bad { background: color-mix(in oklab, var(--bad) 18%, transparent); color: var(--bad); }
+
+.log { display: flex; gap: 6px; flex-wrap: wrap; }
+.log span { font-family: var(--font-num); font-size: 13px; padding: 2px 8px; border-radius: 8px; background: var(--bg); }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 14px; font-weight: 700; font-size: 14px; max-width: calc(100% - 32px); text-align: center; z-index: 20; }
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--line);
+  padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); z-index: 10; }
+nav.tabs .in { max-width: 440px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+nav.tabs button { background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; color: var(--muted); padding: 6px 2px; }
+nav.tabs button svg { width: 22px; height: 22px; }
+nav.tabs button[aria-current="page"] { color: var(--accent); }
+.note { font-size: 12px; color: var(--muted); text-align: center; margin: 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > * { flex: 1 1 auto; }
+.banner { font-size: 13px; border-radius: 14px; padding: 10px 12px; background: var(--accent-soft); color: var(--fg); }
+.loading { text-align: center; color: var(--muted); padding: 40px 0; }
+details.staff-d { border-radius: 14px; background: var(--bg); }
+details.staff-d > summary { list-style: none; cursor: pointer; }
+details.staff-d > summary::-webkit-details-marker { display: none; }
+details.staff-d .staff-row { background: transparent; }
+.staff-detail { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.staff-detail .kv { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
+.staff-detail .kv span:last-child { font-family: var(--font-num); white-space: nowrap; }
+.assign { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.result-msg { font-weight: 700; text-align: center; }
+.gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.gcard { background: var(--nest); border-radius: 18px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-width: 0; }
+.gcard svg { width: 110px; max-width: 100%; height: auto; }
+.gcard b { font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
+.gcard small { font-size: 12px; color: var(--muted); }
+.gcard.me { outline: 3px solid var(--accent); }
+.dragon-name { font-size: 13px; color: var(--muted); }
+.checks { display: flex; flex-direction: column; gap: 6px; }
+.check { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--bg); }
+.check input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--good); }
+.check span { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.check.done span { text-decoration: line-through; color: var(--muted); }
+.check small { display: block; font-size: 11px; color: var(--accent); font-weight: 700; text-decoration: none; }
+.addline { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.month { font-family: var(--font-num); font-size: 13px; color: var(--muted); }
+</style>
+
+</head>
+<body>
+<div class="app" id="app"><div class="loading">読みこみ中…</div></div>
+<div class="toast" id="toast" hidden></div>
+<nav class="tabs" aria-label="画面の切りかえ"><div class="in" id="tabs"></div></nav>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script>
+(() => {
+  const STAGES = ["たまご", "ヒナ", "こども", "成竜"];
+  const GROW_DAYS = 3;
+  const COLORS = ["#3fa36b", "#d9642a", "#3b7dd8", "#c4479a", "#7b5cd6", "#d4a417", "#2aa6a6", "#c8443c", "#5f7d2e", "#8a6a4f"];
+  const JOBS = ["接客", "ネット出品", "梱包", "メンテナンス", "配送", "出張買取"];
+  const ELS = { sunao: "素直さ", kyomi: "相手への興味", hyogen: "表現力" };
+  const JOB_ITEMS = {
+    "接客": [["お客様に名前で声をかけた", 5], ["接客した", 3]],
+    "ネット出品": [["出品", 5]],
+    "梱包": [["梱包", 2]],
+    "メンテナンス": [["メンテナンス1台", 10]],
+    "配送": [["配送1件", 5]],
+    "出張買取": [["出張買取1件", 20]]
+  };
+  const TASKS = {
+    "接客": { sunao: ["先輩やお客様に言われたことを、今日中に1つ試す", "「ありがとうございます、やってみます」と声に出して返事をする"], kyomi: ["お客様1人に、仕事以外の質問を1つする", "お客様の名前と、聞いた話を1つメモする"], hyogen: ["「うれしいです」など気持ちを言葉にして伝える", "いつもより一段明るい声であいさつする"] },
+    "ネット出品": { sunao: ["先輩の説明文を1つまねして書く", "指摘された書き方を今日の出品で直す"], kyomi: ["買う人が知りたいことを想像して、説明に1つ足す", "売れた商品の質問欄を読み、よくある疑問を1つ探す"], hyogen: ["商品の魅力を一言のキャッチで書く", "写真の撮り方を1つ工夫して伝わりやすくする"] },
+    "梱包": { sunao: ["指摘された点をすぐ直す", "先輩の梱包を1つ見せてもらい、まねする"], kyomi: ["開けた人がうれしくなる一工夫をする", "壊れやすい物を受け取る人の気持ちで包む"], hyogen: ["次の担当へ注意点を一言で伝える", "仲間に「助かった」を1回言葉にする"] },
+    "メンテナンス": { sunao: ["わからないことをその場で聞く", "教わった手順をメモして1回そのとおりにやる"], kyomi: ["次に使う人の困りごとを想像して1か所整える", "仲間の作業で手伝えることを1つ探す"], hyogen: ["気づいた不具合を、担当者へ一言で伝える", "作業の終わりに状態を短く報告する"] },
+    "配送": { sunao: ["ミスやヒヤリを早めに報告する", "先輩のルートの工夫を1つ聞いてまねする"], kyomi: ["受け取る人の都合を考えて一言そえる", "お届け先で気づいたことを1つメモする"], hyogen: ["笑顔で一言そえて手渡す", "戻ったら今日のお届けを一言で報告する"] },
+    "出張買取": { sunao: ["先輩の進め方を1つまねる", "査定で迷ったことを先輩に1つ聞く"], kyomi: ["品物にまつわる思い出を1つ聞く", "お客様が大事にしている点を1つ聞き取る"], hyogen: ["査定の理由をわかりやすく伝える", "最後に「お任せいただきありがとうございます」と伝える"] }
+  };
+  const RES = { done: "できた", some: "少しできた", not: "できなかった" };
+
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const pad = n => String(n).padStart(2, "0");
+  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const shortDate = s => s ? `${Number(s.slice(5, 7))}/${Number(s.slice(8, 10))}` : "";
+  const sumItems = items => (items || []).reduce((a, it) => a + (Number(it.pt) || 0) * (Number(it.val) || 0), 0);
+  const monthStr = () => todayStr().slice(0, 7);
+  const nid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const tone = s => s >= 100 ? "good" : s > 80 ? "warn" : "bad";
+
+  // ---- state ----
+  let S = null;            // this viewer's staff record
+  let db = null, uid = null, isOwner = false, ownerCanStaff = true;
+  let staffList = [];      // owner only
+  let staffLoaded = false;
+  let dragons = [], dragonsLoaded = false, lastPublic = "";
+  let tab = "today";
+  let growFx = false;
+  let banner = "";
+  let booted = false;
+  let authUser = null, notMember = false, needLogin = false, members = [], membersLoaded = false;
+
+  function newStaff(name, job, color, dragonName) {
+    const items = (JOB_ITEMS[job] || []).map(([n, pt], i) => ({ id: i + 1, name: n, pt, val: 0 }));
+    items.push({ id: items.length + 1, name: "人たらし力の課題ができた", pt: 10, val: 0 });
+    return {
+      name, job, color, dragonName: dragonName || "", stage: 0, streak: 0, items,
+      ratings: { sunao: 3, kyomi: 3, hyogen: 3 },
+      today: { date: todayStr(), checkedIn: false, task: null, reflect: { result: null, note: "" } },
+      history: [], lastTask: null, lastResult: null, goals: [], tasks: [], givenDone: {}
+    };
+  }
+
+  // Apply the dragon rule to a finished day. Days with no check-in and no points are skipped.
+  function rollover() {
+    const t = todayStr();
+    if (!S.today || S.today.date === t) return false;
+    const sc = sumItems(S.items);
+    const worked = S.today.checkedIn || sc > 0;
+    if (worked) {
+      let msg;
+      if (sc >= 100) {
+        S.streak++;
+        if (S.stage < 3 && S.streak >= GROW_DAYS) { S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${STAGES[S.stage]}になりました`; }
+        else msg = `100点達成！ 連続${S.streak}日目`;
+      } else if (sc <= 80) {
+        const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0;
+        msg = before > S.stage ? `${sc}点で、${STAGES[S.stage]}に戻りました` : `${sc}点。たまごのまま、今日がんばろう`;
+      } else { S.streak = 0; msg = `${sc}点で、ドラゴンは現状維持です`; }
+      S.history = [...(S.history || []), { date: S.today.date, s: sc, res: S.today.reflect?.result || null }].slice(-60);
+      S.lastResult = { date: S.today.date, msg };
+    }
+    S.lastTask = S.today.task ? S.today.task.text : S.lastTask;
+    S.items = S.items.map(it => ({ ...it, val: 0 }));
+    S.tasks = (S.tasks || []).filter(x => !x.done);
+    S.today = { date: t, checkedIn: false, task: null, reflect: { result: null, note: "" } };
+    return true;
+  }
+
+  // ---- storage: shared db when available, otherwise this device ----
+  let saveTimer = null, writing = false, dirty = false, created = false;
+  const LOCAL_KEY = "skiru-app-v1";
+  function persist() { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700); }
+  async function flush() {
+    if (!dirty || !S) return;
+    if (!db) { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(S)); } catch (e) {} dirty = false; return; }
+    if (writing) { saveTimer = setTimeout(flush, 500); return; }
+    writing = true; dirty = false;
+    const { assigned, givenTasks, ...mine } = S;
+    const ref = db.doc("staff/" + uid);
+    try {
+      if (created) await ref.update({ ...mine, updatedAt: new Date().toISOString() });
+      else { await ref.set({ ...mine, updatedAt: new Date().toISOString() }); created = true; }
+      const pub = { name: S.name, job: S.job, color: S.color, dragonName: S.dragonName || "", stage: S.stage };
+      const pubJson = JSON.stringify(pub);
+      if (pubJson !== lastPublic) { await db.doc("dragons/" + uid).set(pub); lastPublic = pubJson; }
+    } catch (e) {
+      if (e && e.code === "permission-denied") { banner = "保存できませんでした。シンプーさんに、メンバー登録してもらってください。"; render(); }
+      else if (e && e.code === "unavailable") { dirty = true; setTimeout(flush, 1500 + Math.random() * 1000); }
+      else { banner = "保存できませんでした。通信を確認してください。"; render(); }
+    }
+    writing = false;
+  }
+  window.addEventListener("pagehide", () => { if (!db) flush(); });
+
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2800);
+  }
+
+  // Dragon drawing: one svg per stage, colored by --dc
+  function dragonSVG(stage, color, cls = "dragon", streak = 0) {
+    const dark = `color-mix(in oklab, ${color} 62%, #000)`;
+    const light = `color-mix(in oklab, ${color} 35%, #fff)`;
+    const eye = (x, y, r = 7) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#1b1b1b"/><circle cx="${x + r * .35}" cy="${y - r * .35}" r="${r * .35}" fill="#fff"/>`;
+    let g = "";
+    if (stage === 0) {
+      g = `<ellipse cx="100" cy="122" rx="50" ry="62" fill="${color}"/>
+        <ellipse cx="84" cy="100" rx="9" ry="12" fill="${dark}" opacity=".55"/><ellipse cx="118" cy="128" rx="12" ry="9" fill="${dark}" opacity=".55"/><ellipse cx="92" cy="152" rx="7" ry="6" fill="${dark}" opacity=".55"/>
+        <ellipse cx="80" cy="88" rx="10" ry="18" fill="#fff" opacity=".35" transform="rotate(-20 80 88)"/>
+        ${streak >= 2 ? `<path d="M70 118 l12 -8 l8 10 l10 -12 l9 9 l12 -7" fill="none" stroke="${dark}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ""}`;
+    } else if (stage === 1) {
+      g = `<path d="M60 128 q40 -30 80 0 l0 30 q-40 26 -80 0z" fill="${color}"/>
+        <circle cx="100" cy="112" r="38" fill="${color}"/>
+        <path d="M78 80 l-6 -18 l16 12z M122 80 l6 -18 l-16 12z" fill="${dark}"/>
+        <ellipse cx="100" cy="128" rx="20" ry="14" fill="${light}"/>
+        ${eye(86, 106)}${eye(114, 106)}
+        <path d="M95 124 q5 5 10 0" fill="none" stroke="#1b1b1b" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M48 150 l10 -16 l12 12 l14 -14 l16 16 l16 -16 l14 14 l12 -12 l10 16 l0 32 q-52 14 -104 0z" fill="#f6f2e8" stroke="#d8d0bf" stroke-width="2"/>`;
+    } else if (stage === 2) {
+      g = `<path d="M128 150 q40 4 42 -26 q-2 18 -24 18" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round"/>
+        <path d="M70 108 q-34 -26 -30 -52 q18 22 40 30z M130 108 q34 -26 30 -52 q-18 22 -40 30z" fill="${dark}"/>
+        <ellipse cx="100" cy="142" rx="38" ry="34" fill="${color}"/>
+        <ellipse cx="100" cy="150" rx="22" ry="22" fill="${light}"/>
+        <circle cx="100" cy="92" r="32" fill="${color}"/>
+        <path d="M80 66 l-8 -22 l18 14z M120 66 l8 -22 l-18 14z" fill="${dark}"/>
+        ${eye(88, 88, 6.5)}${eye(112, 88, 6.5)}
+        <path d="M92 106 q8 6 16 0" fill="none" stroke="#1b1b1b" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="80" cy="174" rx="12" ry="7" fill="${dark}"/><ellipse cx="120" cy="174" rx="12" ry="7" fill="${dark}"/>`;
+    } else {
+      g = `<path d="M70 112 q-60 -40 -58 -88 q16 30 34 30 q-4 -18 6 -30 q10 34 40 56z M130 112 q60 -40 58 -88 q-16 30 -34 30 q4 -18 -6 -30 q-10 34 -40 56z" fill="${dark}"/>
+        <path d="M132 162 q48 10 52 -30 q4 10 -2 22 l10 -2 q-16 34 -60 22" fill="${color}"/>
+        <ellipse cx="100" cy="148" rx="42" ry="38" fill="${color}"/>
+        <path d="M84 120 q16 -10 32 0 l-4 56 q-12 6 -24 0z" fill="${light}"/>
+        <path d="M86 118 q-4 -30 14 -48 q18 18 14 48z" fill="${color}"/>
+        <ellipse cx="100" cy="62" rx="28" ry="24" fill="${color}"/>
+        <path d="M82 46 l-12 -26 l22 16z M118 46 l12 -26 l-22 16z" fill="#f3e3b5"/>
+        ${eye(90, 58, 5.5)}${eye(110, 58, 5.5)}
+        <path d="M92 74 q8 5 16 0" fill="none" stroke="#1b1b1b" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M128 70 q14 -6 22 -2 q-6 2 -4 6 q8 0 12 6 q-14 2 -30 -4z" fill="#f7a23b"/>
+        <ellipse cx="78" cy="184" rx="14" ry="7" fill="${dark}"/><ellipse cx="122" cy="184" rx="14" ry="7" fill="${dark}"/>`;
+    }
+    return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body">${g}</g></svg>`;
+  }
+
+  function ring(score) {
+    const r = 48, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, score / 100));
+    const col = score >= 100 ? "var(--good)" : score > 80 ? "var(--warn)" : "var(--bad)";
+    return `<div class="ring"><svg viewBox="0 0 112 112"><circle cx="56" cy="56" r="${r}" fill="none" stroke="var(--line)" stroke-width="10"/>
+      <circle cx="56" cy="56" r="${r}" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${c * p} ${c}"/></svg>
+      <div class="num"><b>${score}</b><small>/ 100点</small></div></div>`;
+  }
+
+  function verdict(score) {
+    if (score >= 100) return `<div class="verdict good">100点達成${score > 100 ? `（+${score - 100}点）` : ""}！このままなら連続${S.streak + 1}日目</div>`;
+    if (score > 80) return `<div class="verdict warn">あと${100 - score}点で100点。今のままなら現状維持</div>`;
+    return `<div class="verdict bad">80点以下だとドラゴンが退化します。あと${100 - score}点</div>`;
+  }
+
+  function header() {
+    const who = S ? `<span class="dot" style="background:${S.color}"></span>${esc(S.name)} ・ ${esc(S.job)}` : (isOwner ? "管理者" : "");
+    return `<header class="top"><div class="brand"><img src="icon-96.png" alt="" class="app-icon" width="40" height="40"><div class="logo">スキ<span>る</span></div></div><div class="who">${who}${authUser ? ` <button class="mini" id="logout">ログアウト</button>` : ""}</div></header>
+      ${banner ? `<div class="banner">${esc(banner)}</div>` : ""}`;
+  }
+
+  function nest() {
+    const bars = STAGES.map((_, i) => `<i class="${i <= S.stage ? "on" : ""}"></i>`).join("");
+    const next = S.stage < 3 ? `次の進化まで 100点を あと<b>${GROW_DAYS - S.streak}</b>日` : `最終形態！ 100点連続 <b>${S.streak}</b>日`;
+    return `<section class="nest" style="--dc:${S.color}"><div class="${growFx ? "grow-fx" : ""}">${dragonSVG(S.stage, S.color, "dragon", S.streak)}</div>
+      <div class="stage-name">${S.dragonName ? esc(S.dragonName) : STAGES[S.stage]}</div>${S.dragonName ? `<div class="dragon-name">${STAGES[S.stage]}</div>` : ""}<div class="stages">${bars}</div><div class="streak">${next}</div></section>`;
+  }
+
+  function currentTask() {
+    const a = S.assigned;
+    if (a && a.date === todayStr() && a.text) return { el: "assigned", text: a.text };
+    return S.today.task;
+  }
+
+  function openGiven(d) {
+    const done = d.givenDone || {};
+    return (d.givenTasks || []).filter(g => !done[g.id] || done[g.id] === todayStr());
+  }
+
+  function tasksCard() {
+    const given = openGiven(S).map(g => `<label class="check ${S.givenDone && S.givenDone[g.id] ? "done" : ""}"><input type="checkbox" data-gdone="${esc(g.id)}" ${S.givenDone && S.givenDone[g.id] ? "checked" : ""}>
+      <span><small>シンプーさんから</small>${esc(g.text)}</span><span></span></label>`).join("");
+    const mine = (S.tasks || []).map(x => `<label class="check ${x.done ? "done" : ""}"><input type="checkbox" data-tdone="${x.id}" ${x.done ? "checked" : ""}>
+      <span>${esc(x.text)}</span><button class="mini" data-tdel="${x.id}" aria-label="消す">×</button></label>`).join("");
+    const n = (S.tasks || []).length + openGiven(S).length;
+    const d = (S.tasks || []).filter(x => x.done).length + openGiven(S).filter(g => S.givenDone && S.givenDone[g.id]).length;
+    return `<section class="card"><h2>今日のタスク ${n ? `<span class="month">${d} / ${n}</span>` : ""}</h2>
+      ${n ? `<div class="checks">${given}${mine}</div>` : `<p class="sub">今日やることを書いておきましょう。終わったらチェックします。終わっていないタスクは次の日に持ちこします。</p>`}
+      <div class="addline"><input type="text" id="new-task" placeholder="例：棚の商品を10点撮影" maxlength="60"><button class="mini" id="add-task">追加</button></div></section>`;
+  }
+
+  function goalsCard() {
+    const m = monthStr();
+    const gs = (S.goals || []).filter(g => g.month === m);
+    const list = gs.map(g => `<label class="check ${g.done ? "done" : ""}"><input type="checkbox" data-goaldone="${g.id}" ${g.done ? "checked" : ""}>
+      <span>${esc(g.text)}</span><button class="mini" data-goaldel="${g.id}" aria-label="消す">×</button></label>`).join("");
+    return `<section class="card"><h2>今月の目標 <span class="month">${Number(m.slice(5))}月</span></h2>
+      ${gs.length ? `<div class="checks">${list}</div>` : `<p class="sub">今月どうなりたいかを1〜3個決めましょう。例：「ドラゴンをこどもまで育てる」「表現力を4にする」</p>`}
+      ${gs.length < 3 ? `<div class="addline"><input type="text" id="new-goal" placeholder="今月の目標を書く" maxlength="60"><button class="mini" id="add-goal">追加</button></div>` : ""}</section>`;
+  }
+
+  function viewLogin() {
+    return `<section class="card" style="align-items:center;text-align:center"><img src="icon-512.png" alt="スキるのドラゴン" class="hero-icon" width="180" height="180">
+      <h2>スキるへようこそ</h2><p class="sub">Gmailのアカウントでログインしてください。</p>
+      <button class="primary" id="login">Googleでログイン</button></section>`;
+  }
+
+  function viewNotMember() {
+    return `<section class="card"><h2>まだメンバーに登録されていません</h2>
+      <p class="sub">シンプーさんに、次のGmailアドレスをメンバーに追加してもらってください。追加されたら、このページを開き直してください。</p>
+      <p style="font-weight:700;overflow-wrap:anywhere">${esc(authUser && authUser.email)}</p>
+      <button class="ghost" id="logout2">別のアカウントでログインする</button></section>`;
+  }
+
+  function viewSetup() {
+    return `<section class="card"><img src="icon-512.png" alt="スキるのドラゴン" class="hero-icon" width="180" height="180"><h2>はじめまして</h2><p class="sub">名前と担当業務、ドラゴンの色を決めてください。あとから「点数項目」で変えられます。</p>
+      <label class="field">名前<input type="text" id="su-name" placeholder="例：みさき"></label>
+      <label class="field">ドラゴンの名前<input type="text" id="su-dragon" placeholder="例：ほのか" maxlength="12"></label>
+      <label class="field">担当業務<select id="su-job">${JOBS.map(j => `<option>${j}</option>`).join("")}</select></label>
+      <div class="field">ドラゴンの色<div class="colors">${COLORS.map((c, i) => `<button style="background:${c}" data-sucolor="${c}" aria-pressed="${i === 0}" aria-label="色 ${c}"></button>`).join("")}</div></div>
+      <button class="primary" id="su-go">たまごを受け取る</button>
+      ${isOwner ? `<p class="sub">シンプーさんが管理だけする場合は、登録しなくて大丈夫です。下の「管理者」を開いてください。</p>` : ""}</section>`;
+  }
+
+  function viewToday() {
+    const sc = sumItems(S.items);
+    const items = S.items.map(it => `<div class="item"><div class="label">${esc(it.name)}<small>${it.pt}点 × <span id="cnt-${it.id}">${it.val}</span>回 = <b id="sub-${it.id}">${it.pt * it.val}点</b></small></div>
+      <div class="stepper"><button class="mini" data-dec="${it.id}" aria-label="${esc(it.name)}を1回へらす">−</button>
+      <input type="number" inputmode="numeric" min="0" value="${it.val}" id="val-${it.id}" data-val="${it.id}" aria-label="${esc(it.name)}の回数">
+      <button class="mini" data-inc="${it.id}" aria-label="${esc(it.name)}を1回ふやす">＋</button></div></div>`).join("");
+    const tk = currentTask();
+    const task = S.today.checkedIn && tk
+      ? `<div class="task"><span class="el">今日の課題 ・ ${tk.el === "assigned" ? "シンプーさんから" : ELS[tk.el]}</span><p>${esc(tk.text)}</p></div><p class="sub">夜に「ふりかえり」でできたかを記録してください。</p>`
+      : `<p class="sub">出勤したらボタンを押してください。ドラゴンが今日の課題を1つ出します。</p><button class="primary" id="checkin">出勤する</button>`;
+    const last = S.lastResult ? `<p class="result-msg">前回（${shortDate(S.lastResult.date)}）：${esc(S.lastResult.msg)}</p>` : "";
+    const hist = (S.history || []).slice(-7).map(h => `<span>${shortDate(h.date)} ${h.s}</span>`).join("");
+    return `${nest()}${last}
+      <section class="card"><h2>人たらし力の課題</h2>${task}</section>
+      ${tasksCard()}
+      <section class="card"><h2>点数カウンター</h2><div class="counter" id="counter">${ring(sc)}<div>${verdict(sc)}</div></div>
+        <p class="sub">やった回数は、数字の欄をタップして直接入力するか、＋−で変えます。日付が変わると、その日の点数でドラゴンが育ちます。</p>
+        <div class="items">${items}</div></section>
+      ${goalsCard()}
+      ${hist ? `<section class="card"><h2>最近の点数</h2><div class="log">${hist}</div></section>` : ""}`;
+  }
+
+  function viewItems() {
+    const rows = S.items.map(it => `<div class="edit-row"><input type="text" id="name-${it.id}" data-name="${it.id}" value="${esc(it.name)}" aria-label="項目名">
+      <input type="number" id="pt-${it.id}" data-ptin="${it.id}" min="1" max="100" value="${it.pt}" aria-label="1回の点数">
+      <button class="mini" data-del="${it.id}" aria-label="${esc(it.name)}を消す">消す</button></div>`).join("");
+    return `<section class="card"><h2>点数項目</h2><p class="sub">自分の仕事に合わせて、項目と「1回あたりの点数」を決めます。例：出品1件で5点なら、23件で115点です。シンプーさんはこの内容を確認できます。</p>
+      <div class="edit-row" style="font-size:12px;color:var(--muted)"><span>項目</span><span>1回の点数</span><span></span></div>${rows}
+      <button class="ghost" id="additem">＋ 項目を足す</button></section>
+      <section class="card"><h2>わたしの設定</h2>
+        <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
+        <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
+        <label class="field">担当業務<select id="set-job">${JOBS.map(j => `<option ${j === S.job ? "selected" : ""}>${j}</option>`).join("")}</select></label>
+        <div class="field">ドラゴンの色<div class="colors">${COLORS.map(c => `<button style="background:${c}" data-color="${c}" aria-pressed="${c === S.color}" aria-label="色 ${c}"></button>`).join("")}</div></div>
+      </section>`;
+  }
+
+  function viewReflect() {
+    const r = S.today.reflect;
+    const tk = currentTask();
+    const rates = Object.entries(ELS).map(([k, l]) => `<label class="rate" for="rate-${k}"><span>${l}</span>
+      <input type="range" min="1" max="5" step="1" id="rate-${k}" data-rate="${k}" value="${S.ratings[k]}"><b>${S.ratings[k]}</b></label>`).join("");
+    return `<section class="card"><h2>今日の課題をふりかえる</h2>
+      ${S.today.checkedIn && tk ? `<div class="task"><span class="el">${tk.el === "assigned" ? "シンプーさんから" : ELS[tk.el]}</span><p>${esc(tk.text)}</p></div>` : `<p class="sub">まだ出勤していません。「きょう」で出勤すると課題が出ます。</p>`}
+      <div class="seg" role="group" aria-label="できたかどうか">${Object.entries(RES).map(([k, l]) => `<button data-res="${k}" aria-pressed="${r.result === k}">${l}</button>`).join("")}</div>
+      <label class="field">ひとこと<textarea id="note" placeholder="例：お客様に好きな作家を聞いたら、話がはずんだ">${esc(r.note)}</textarea></label></section>
+      <section class="card"><h2>人たらし力の自己評価</h2><p class="sub">5段階で今の自分をつけます。一番低い力の課題が出やすくなります。</p>${rates}</section>`;
+  }
+
+  function viewAll() {
+    if (!dragonsLoaded) return `<div class="loading">みんなのドラゴンを読みこみ中…</div>`;
+    const order = [...dragons].sort((a, b) => (b.stage || 0) - (a.stage || 0) || String(a.name).localeCompare(String(b.name), "ja"));
+    const cards = order.map(d => `<div class="gcard ${d.id === uid ? "me" : ""}">${dragonSVG(d.stage || 0, d.color || COLORS[0], "g-d")}
+      <b>${esc(d.dragonName || STAGES[d.stage || 0])}</b><small>${STAGES[d.stage || 0]} ・ ${esc(d.name)}${d.id === uid ? "（あなた）" : ""}</small></div>`).join("");
+    return `<section class="card"><h2>みんなのドラゴン</h2><p class="sub">点数は見えません。ドラゴンの育ち具合だけ、みんなで見られます。</p>
+      ${order.length ? `<div class="gallery">${cards}</div>` : `<p class="sub">まだ誰もドラゴンを持っていません。</p>`}</section>`;
+  }
+
+  function viewAdmin() {
+    if (!staffLoaded) return `<div class="loading">スタッフのデータを読みこみ中…</div>`;
+    const t = todayStr();
+    const list = staffList.map(d => {
+      const isToday = d.today && d.today.date === t;
+      const sc = isToday ? sumItems(d.items) : null;
+      const tk = d.assigned && d.assigned.date === t && d.assigned.text ? d.assigned.text : (isToday && d.today.task ? d.today.task.text : "");
+      const res = isToday && d.today.reflect && d.today.reflect.result ? RES[d.today.reflect.result] : "まだ";
+      const status = !isToday || !d.today.checkedIn ? "未出勤" : `課題${res}`;
+      const items = (d.items || []).map(it => `<div class="kv"><span>${esc(it.name)}（${it.pt}点）</span><span>${isToday ? it.val : 0}回 = ${isToday ? it.pt * it.val : 0}点</span></div>`).join("");
+      const hist = (d.history || []).slice(-7).map(h => `<span>${shortDate(h.date)} ${h.s}</span>`).join("");
+      const rt = d.ratings || {};
+      return `<details class="staff-d"><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", d.streak || 0)}
+        <div class="nm"><span class="dot" style="background:${esc(d.color)};width:10px;height:10px;margin-right:6px;border:none;box-shadow:none"></span>${esc(d.name)}<small>${esc(d.job)} ・ ${STAGES[d.stage || 0]} ・ ${status}</small></div>
+        <span class="pill ${sc === null ? "warn" : tone(sc)}">${sc === null ? "−" : sc}</span></div></summary>
+        <div class="staff-detail">
+          ${tk ? `<div><b>今日の課題：</b>${esc(tk)}</div>` : ""}
+          ${isToday && d.today.reflect && d.today.reflect.note ? `<div><b>ひとこと：</b>${esc(d.today.reflect.note)}</div>` : ""}
+          <div><b>点数項目</b></div>${items}
+          <div><b>自己評価：</b>素直さ ${rt.sunao || "-"} ・ 興味 ${rt.kyomi || "-"} ・ 表現力 ${rt.hyogen || "-"}</div>
+          ${hist ? `<div class="log">${hist}</div>` : ""}
+          ${(d.goals || []).filter(g => g.month === monthStr()).length ? `<div><b>今月の目標</b></div>${d.goals.filter(g => g.month === monthStr()).map(g => `<div class="kv"><span>${esc(g.text)}</span><span>${g.done ? "達成" : "−"}</span></div>`).join("")}` : ""}
+          ${(d.tasks || []).length || openGiven(d).length ? `<div><b>今日のタスク</b></div>${openGiven(d).map(g => `<div class="kv"><span>${esc(g.text)}（渡したタスク）</span><span>${d.givenDone && d.givenDone[g.id] ? "完了" : "−"} <button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}${(d.tasks || []).map(x => `<div class="kv"><span>${esc(x.text)}</span><span>${x.done ? "完了" : "−"}</span></div>`).join("")}` : ""}
+          <div class="assign"><input type="text" id="gv-${esc(d.id)}" placeholder="タスクを渡す" maxlength="60" aria-label="${esc(d.name)}さんに渡すタスク"><button class="mini" data-give="${esc(d.id)}">渡す</button></div>
+          <div class="assign"><input type="text" id="as-${esc(d.id)}" placeholder="今日の課題を指定する" value="${d.assigned && d.assigned.date === t ? esc(d.assigned.text) : ""}" aria-label="${esc(d.name)}さんへの課題"><button class="mini" data-assign="${esc(d.id)}">指定</button></div>
+        </div></details>`;
+    }).join("");
+    const todays = staffList.filter(d => d.today && d.today.date === t && (d.today.checkedIn || sumItems(d.items) > 0));
+    const avg = todays.length ? Math.round(todays.reduce((a, d) => a + sumItems(d.items), 0) / todays.length) : 0;
+    const hit = todays.filter(d => sumItems(d.items) >= 100).length;
+    const memberCard = `<section class="card"><h2>メンバー</h2><p class="sub">スキるを使えるのは、ここに登録したGmailアドレスの人だけです。</p>
+      <div class="checks">${members.map(m => `<div class="check"><span></span><span>${esc(m)}</span><button class="mini" data-mdel="${esc(m)}" aria-label="${esc(m)}を外す">外す</button></div>`).join("") || `<p class="sub">まだ誰も登録していません。</p>`}</div>
+      <div class="addline"><input type="email" id="new-member" placeholder="例：staff@gmail.com" autocomplete="off"><button class="mini" id="add-member">追加</button></div></section>`;
+    return memberCard + `<section class="card"><h2>みんなの今日</h2>
+      ${staffList.length ? `<div class="row"><div class="item" style="display:block"><small style="color:var(--muted)">出勤</small><div style="font-family:var(--font-num);font-size:24px">${todays.length} / ${staffList.length}人</div></div>
+      <div class="item" style="display:block"><small style="color:var(--muted)">平均</small><div style="font-family:var(--font-num);font-size:24px">${avg}点</div></div>
+      <div class="item" style="display:block"><small style="color:var(--muted)">100点</small><div style="font-family:var(--font-num);font-size:24px">${hit}人</div></div></div>
+      <p class="sub">名前をタップすると、点数の内訳、ふりかえり、課題の指定が出ます。</p>
+      <div class="staff">${list}</div>`
+      : `<p class="sub">まだ誰も登録していません。上の「メンバー」にスタッフのGmailを追加して、アプリのアドレスを伝えてください。</p>`}</section>`;
+  }
+
+  function render() {
+    if (!booted) { $("#app").innerHTML = header() + '<div class="loading">読みこみ中…</div>'; return; }
+    let html = header();
+    if (needLogin || notMember) {
+      $("#app").innerHTML = html + (needLogin ? viewLogin() : viewNotMember());
+      $("#tabs").innerHTML = ""; $("#tabs").parentElement.hidden = true;
+      return;
+    }
+    $("#tabs").parentElement.hidden = false;
+    if (!S && !isOwner) html += viewSetup();
+    else if (tab === "admin") html += viewAdmin();
+    else if (tab === "all") html += viewAll();
+    else if (!S) html += viewSetup();
+    else html += ({ today: viewToday, items: viewItems, reflect: viewReflect }[tab] || viewToday)();
+    $("#app").innerHTML = html;
+    const tabs = [
+      ["today", "きょう", '<path d="M12 3c-4 3-7 6-7 10a7 7 0 0 0 14 0c0-4-3-7-7-10z" fill="none" stroke="currentColor" stroke-width="2"/>'],
+      ["items", "点数項目", '<path d="M5 6h14M5 12h14M5 18h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'],
+      ["reflect", "ふりかえり", '<path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'],
+      ["all", "みんな", '<circle cx="7" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="14" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4l1.5 3 3 .5-2.2 2 .6 3-2.9-1.5-2.9 1.5.6-3-2.2-2 3-.5z" fill="currentColor"/>']
+    ];
+    if (!S) tabs.splice(0, 3, ["today", "登録", tabs[0][2]]);
+    if (isOwner) tabs.push(["admin", "管理者", '<circle cx="9" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 20c0-3.5 3-5.5 6-5.5s6 2 6 5.5M16 6.5a3 3 0 0 1 0 6M18 14.5c2 .6 3 2.5 3 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>']);
+    $("#tabs").style.gridTemplateColumns = `repeat(${tabs.length}, 1fr)`;
+    $("#tabs").innerHTML = tabs.map(([k, l, ic]) => `<button data-tab="${k}" ${tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("");
+    growFx = false;
+  }
+
+  function pickTask() {
+    const weakest = Object.keys(ELS).sort((a, b) => S.ratings[a] - S.ratings[b])[0];
+    const el = Math.random() < 0.6 ? weakest : Object.keys(ELS)[Math.floor(Math.random() * 3)];
+    const pool = (TASKS[S.job] || TASKS["接客"])[el];
+    const list = pool.filter(t => t !== S.lastTask);
+    return { el, text: list[Math.floor(Math.random() * list.length)] };
+  }
+
+  function liveTotals(it) {
+    $("#cnt-" + it.id).textContent = it.val;
+    $("#sub-" + it.id).textContent = it.pt * it.val + "点";
+    const sc = sumItems(S.items);
+    $("#counter").innerHTML = ring(sc) + `<div>${verdict(sc)}</div>`;
+  }
+
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const d = b.dataset;
+    if (d.tab) { tab = d.tab; render(); window.scrollTo(0, 0); return; }
+    if (b.id === "login") { login(); return; }
+    if (b.id === "logout" || b.id === "logout2") { await flush(); await firebase.auth().signOut(); location.reload(); return; }
+    if (b.id === "add-member") {
+      const inp = $("#new-member"); const em = inp.value.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { inp.focus(); toast("Gmailアドレスを入れてください"); return; }
+      try { await db.doc("members/" + em).set({ addedAt: new Date().toISOString() }); inp.value = ""; toast("メンバーに追加しました"); } catch (err) { toast("追加できませんでした"); }
+      return;
+    }
+    if (d.mdel) {
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "本当に外す"; setTimeout(() => { b.dataset.confirm = ""; b.textContent = "外す"; }, 3000); return; }
+      try { await db.doc("members/" + d.mdel).delete(); toast("外しました"); } catch (err) { toast("外せませんでした"); }
+      return;
+    }
+    if (d.sucolor) { document.querySelectorAll("[data-sucolor]").forEach(x => x.setAttribute("aria-pressed", x === b)); return; }
+    if (b.id === "su-go") {
+      const name = $("#su-name").value.trim();
+      if (!name) { $("#su-name").focus(); toast("名前を入れてください"); return; }
+      const color = ($("[data-sucolor][aria-pressed=true]") || {}).dataset?.sucolor || COLORS[0];
+      S = newStaff(name, $("#su-job").value, color, $("#su-dragon").value.trim().slice(0, 12));
+      tab = "today"; render(); persist(); toast("たまごを受け取りました"); return;
+    }
+    if (d.assign) {
+      const text = $("#as-" + d.assign).value.trim();
+      try { await db.doc("staff/" + d.assign).update({ assigned: { date: todayStr(), text } }); toast(text ? "課題を指定しました" : "指定を外しました"); }
+      catch (err) { toast("指定できませんでした"); }
+      return;
+    }
+    if (d.give) {
+      const inp = $("#gv-" + d.give); const text = inp.value.trim(); if (!text) { inp.focus(); return; }
+      const st = staffList.find(x => x.id === d.give);
+      const list = [...((st && st.givenTasks) || []).filter(g => !(st.givenDone || {})[g.id] || st.givenDone[g.id] === todayStr()), { id: nid(), text, date: todayStr() }];
+      try { await db.doc("staff/" + d.give).update({ givenTasks: list }); inp.value = ""; toast("タスクを渡しました"); } catch (err) { toast("渡せませんでした"); }
+      return;
+    }
+    if (d.gdel) {
+      const [sid, gid] = d.gdel.split("|"); const st = staffList.find(x => x.id === sid);
+      try { await db.doc("staff/" + sid).update({ givenTasks: ((st && st.givenTasks) || []).filter(g => g.id !== gid) }); toast("取り消しました"); } catch (err) { toast("取り消せませんでした"); }
+      return;
+    }
+    if (!S) return;
+    if (b.id === "add-task") { const v = $("#new-task").value.trim(); if (!v) return; S.tasks = [...(S.tasks || []), { id: nid(), text: v, done: false }]; render(); persist(); $("#new-task").focus(); return; }
+    if (d.tdel) { S.tasks = S.tasks.filter(x => x.id !== d.tdel); render(); persist(); return; }
+    if (b.id === "add-goal") { const v = $("#new-goal").value.trim(); if (!v) return; S.goals = [...(S.goals || []), { id: nid(), text: v, month: monthStr(), done: false }]; render(); persist(); return; }
+    if (d.goaldel) { S.goals = S.goals.filter(x => x.id !== d.goaldel); render(); persist(); return; }
+    if (b.id === "checkin") { S.today.checkedIn = true; S.today.task = pickTask(); render(); persist(); toast("今日の課題が出ました"); return; }
+    if (d.dec) { const it = S.items.find(x => x.id == d.dec); it.val = Math.max(0, (Number(it.val) || 0) - 1); $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
+    if (d.inc) { const it = S.items.find(x => x.id == d.inc); it.val = (Number(it.val) || 0) + 1; $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
+    if (d.del) { S.items = S.items.filter(x => x.id != d.del); render(); persist(); return; }
+    if (b.id === "additem") { const id = Math.max(0, ...S.items.map(x => x.id)) + 1; S.items.push({ id, name: "新しい項目", pt: 5, val: 0 }); render(); persist(); $("#name-" + id).focus(); return; }
+    if (d.color) { S.color = d.color; render(); persist(); toast("ドラゴンの色を変えました"); return; }
+    if (d.res) { S.today.reflect.result = d.res; render(); persist(); return; }
+  });
+
+  document.addEventListener("change", e => {
+    if (!S) return;
+    const t = e.target, d = t.dataset;
+    if (d.tdone) { const x = S.tasks.find(y => y.id === d.tdone); x.done = t.checked; render(); persist(); if (t.checked) toast("おつかれさま！"); return; }
+    if (d.gdone) { S.givenDone = { ...(S.givenDone || {}) }; if (t.checked) S.givenDone[d.gdone] = todayStr(); else delete S.givenDone[d.gdone]; render(); persist(); if (t.checked) toast("おつかれさま！"); return; }
+    if (d.goaldone) { const g = S.goals.find(y => y.id === d.goaldone); g.done = t.checked; render(); persist(); if (t.checked) toast("目標達成！"); return; }
+    if (d.name) { S.items.find(x => x.id == d.name).name = t.value.trim() || "項目"; render(); persist(); }
+    else if (d.ptin) { const it = S.items.find(x => x.id == d.ptin); it.pt = Math.max(1, Math.min(100, Number(t.value) || 1)); render(); persist(); }
+    else if (t.id === "set-name") { S.name = t.value.trim() || S.name; render(); persist(); }
+    else if (t.id === "set-job") { S.job = t.value; render(); persist(); }
+    else if (t.id === "set-dragon") { S.dragonName = t.value.trim().slice(0, 12); render(); persist(); toast("ドラゴンの名前を変えました"); }
+  });
+  document.addEventListener("input", e => {
+    if (!S) return;
+    const t = e.target;
+    if (t.dataset.val) { const it = S.items.find(x => x.id == t.dataset.val); it.val = Math.max(0, Math.floor(Number(t.value) || 0)); liveTotals(it); persist(); }
+    else if (t.dataset.rate) { S.ratings[t.dataset.rate] = Number(t.value); t.nextElementSibling.textContent = t.value; persist(); }
+    else if (t.id === "note") { S.today.reflect.note = t.value; persist(); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.isComposing) return;
+    const map = { "new-task": "#add-task", "new-goal": "#add-goal", "new-member": "#add-member" };
+    if (map[e.target.id]) { e.preventDefault(); $(map[e.target.id]).click(); }
+    else if (e.target.id && e.target.id.startsWith("gv-")) { e.preventDefault(); $(`[data-give="${e.target.id.slice(3)}"]`).click(); }
+  });
+  document.addEventListener("focusin", e => { if (e.target.dataset && e.target.dataset.val) e.target.select(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && S && rollover()) { render(); persist(); if (S.lastResult) toast(S.lastResult.msg); }
+  });
+
+  // ---- boot ----
+  function login() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    firebase.auth().signInWithPopup(provider).catch(err => {
+      if (err && (err.code === "auth/popup-blocked" || err.code === "auth/operation-not-supported-in-this-environment")) firebase.auth().signInWithRedirect(provider);
+      else if (err && err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") toast("ログインできませんでした");
+    });
+  }
+
+  function boot() {
+    if (!window.SKIRU_CONFIG || !window.firebase) { banner = "設定ファイルが読みこめませんでした。"; booted = true; needLogin = true; render(); return; }
+    firebase.initializeApp(SKIRU_CONFIG.firebaseConfig);
+    db = firebase.firestore();
+    firebase.auth().getRedirectResult().catch(() => {});
+    let started = false;
+    firebase.auth().onAuthStateChanged(async u => {
+      if (!u) { authUser = null; needLogin = true; booted = true; render(); return; }
+      if (started) return;
+      started = true; authUser = u; needLogin = false; uid = u.uid;
+      const email = (u.email || "").toLowerCase();
+      isOwner = (SKIRU_CONFIG.adminEmails || []).map(x => x.toLowerCase()).includes(email);
+      if (!isOwner) {
+        try { const m = await db.doc("members/" + email).get(); if (!m.exists) { notMember = true; booted = true; render(); return; } }
+        catch (e) { notMember = true; booted = true; render(); return; }
+      }
+      start();
+    });
+  }
+
+  function start() {
+      let timer = setTimeout(() => { banner = "データにまだつながりません。通信を確認してください。"; render(); }, 10000);
+      let first = true;
+      db.doc("staff/" + uid).onSnapshot(snap => {
+        if (!snap.metadata.fromCache) { clearTimeout(timer); if (banner.startsWith("データにまだ")) banner = ""; }
+        if (first) {
+          if (!snap.exists && snap.metadata.fromCache) return;
+          first = false; booted = true;
+          if (snap.exists) { S = structuredClone(snap.data()); created = true; }
+          if (isOwner && !S) tab = "admin";
+          if (S && rollover()) { persist(); if (S.lastResult) setTimeout(() => toast(S.lastResult.msg), 300); }
+          render();
+          return;
+        }
+        // later snapshots: only take the owner's assignment, keep local edits
+        if (snap.exists && S) {
+          const a = snap.data().assigned, gt = snap.data().givenTasks;
+          if (JSON.stringify(a) !== JSON.stringify(S.assigned) || JSON.stringify(gt) !== JSON.stringify(S.givenTasks)) {
+            S.assigned = a ? structuredClone(a) : undefined; S.givenTasks = gt ? structuredClone(gt) : [];
+            const f = document.activeElement && document.activeElement.id;
+            if (tab !== "admin" && f !== "new-task" && f !== "new-goal" && f !== "note") render();
+          }
+        }
+      }, err => { clearTimeout(timer); banner = "データを読みこめませんでした。ページを開き直してください。"; render(); });
+      db.collection("dragons").onSnapshot(qs => {
+        dragons = qs.docs.filter(x => x.exists).map(x => ({ id: x.id, ...x.data() }));
+        dragonsLoaded = true;
+        if (tab === "all") render();
+      }, () => { dragonsLoaded = true; if (tab === "all") render(); });
+      if (isOwner) {
+        db.collection("staff").onSnapshot(qs => {
+          staffList = qs.docs.filter(x => x.exists).map(x => ({ id: x.id, ...x.data() }));
+          staffList.sort((a, b) => String(a.name).localeCompare(String(b.name), "ja"));
+          staffLoaded = true;
+          if (tab === "admin") {
+            const open = [...document.querySelectorAll("details.staff-d")].map((x, i) => x.open ? i : -1).filter(i => i >= 0);
+            const focused = document.activeElement && document.activeElement.id;
+            if (focused && (focused.startsWith("as-") || focused.startsWith("gv-"))) return;
+            render();
+            const ds = document.querySelectorAll("details.staff-d"); open.forEach(i => ds[i] && (ds[i].open = true));
+          }
+        }, () => { staffLoaded = true; });
+      }
+      if (isOwner) {
+        db.collection("members").onSnapshot(qs => {
+          members = qs.docs.map(x => x.id).sort();
+          membersLoaded = true;
+          const f = document.activeElement && document.activeElement.id;
+          if (tab === "admin" && f !== "new-member") render();
+        }, () => {});
+      }
+  }
+  render();
+  boot();
+})();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.email in ['sinpooh@urukau-ichioshi.com']; }
+    function isMember() { return signedIn() && exists(/databases/$(database)/documents/members/$(request.auth.token.email)); }
+
+    // メンバー名簿：管理者だけが追加・削除。本人は自分の行だけ読める。
+    match /members/{email} {
+      allow read: if isAdmin() || (signedIn() && request.auth.token.email == email);
+      allow write: if isAdmin();
+    }
+    // 点数・振り返り：メンバー全員が見られる。書くのは本人と管理者だけ。
+    match /staff/{uid} {
+      allow read: if isAdmin() || isMember();
+      allow create, update: if isAdmin() || (isMember() && request.auth.uid == uid);
+      allow delete: if isAdmin();
+    }
+    // ドラゴン：メンバー全員が見られる。書くのは本人と管理者だけ。
+    match /dragons/{uid} {
+      allow read: if isAdmin() || isMember();
+      allow write: if isAdmin() || (isMember() && request.auth.uid == uid);
+    }
+  }
+}

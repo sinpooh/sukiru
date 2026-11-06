@@ -200,6 +200,50 @@ details.hday > summary { list-style: none; cursor: pointer; display: flex; justi
 details.hday > summary::-webkit-details-marker { display: none; }
 .hday-body { padding: 0 12px 10px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
 .hday-body .kv { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
+/* today's score, big */
+.score-hero { gap: 6px; background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 14%, var(--panel)), var(--panel)); }
+.hero-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); font-weight: 700; }
+.hero-num { display: flex; align-items: baseline; gap: 4px; justify-content: center; }
+.hero-num b { font-family: var(--font-num); font-weight: 400; font-size: 72px; line-height: 1; color: var(--fg); }
+.hero-num span { font-size: 18px; font-weight: 900; }
+.hero-num b.bump { animation: bump .35s ease-out; }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.18); color: var(--accent); } 100% { transform: scale(1); } }
+.hero-bar { height: 14px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.hero-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #ffb347, var(--accent)); transition: width .35s ease; }
+.hero-msg { text-align: center; font-weight: 900; font-size: 17px; margin: 2px 0 0; }
+.hero-msg b { font-family: var(--font-num); font-weight: 400; font-size: 24px; color: var(--accent); }
+.score-hero.done { background: linear-gradient(135deg, #fff3c4, var(--panel)); }
+.score-hero.done .hero-bar i { background: linear-gradient(90deg, #ffd34d, #f2b630, #3fa36b); }
+.score-hero.done .hero-msg { color: #b07a00; }
+/* score bar above the tabs while on 今日 */
+.livebar { max-width: 440px; margin: 0 auto 6px; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; background: var(--bg); border-radius: 12px; padding: 6px 12px; font-size: 13px; font-weight: 700; }
+.livebar[hidden] { display: none; }
+.lb-num b { font-family: var(--font-num); font-weight: 400; font-size: 22px; }
+.lb-bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.lb-bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .35s ease; }
+.livebar.done .lb-bar i { background: #f2b630; }
+.livebar.done .lb-msg { color: #b07a00; }
+body.has-live .app { padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+/* 100-point celebration */
+.celebrate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(20, 16, 8, .45); animation: fadein .2s ease-out; }
+.celebrate[hidden] { display: none; }
+@keyframes fadein { from { opacity: 0; } }
+.confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti i { position: absolute; top: -20px; left: var(--x); width: 9px; height: 14px; background: var(--c); border-radius: 2px; transform: scale(var(--s)); animation: fall 2.6s cubic-bezier(.3,.6,.5,1) var(--d) forwards; }
+@keyframes fall { to { transform: translateY(105vh) rotate(var(--r)) scale(var(--s)); } }
+.cele-card { position: relative; background: var(--panel); border-radius: 28px; padding: 18px 26px 16px; text-align: center; width: min(320px, calc(100% - 48px)); animation: pop .45s cubic-bezier(.2,1.6,.4,1); box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+@keyframes pop { from { transform: scale(.5); opacity: 0; } }
+.cele-glow { position: absolute; left: 50%; top: 90px; width: 200px; height: 200px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(255, 214, 80, .75), rgba(255, 214, 80, 0) 70%); animation: glow 1.2s ease-in-out infinite alternate; }
+@keyframes glow { from { opacity: .55; transform: translate(-50%, -50%) scale(.85); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
+.cele-dragon { position: relative; animation: jump .7s ease-in-out 3; }
+.cele-dragon svg { width: 150px; height: auto; }
+@keyframes jump { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-34px) rotate(-6deg); } 60% { transform: translateY(0) rotate(4deg) scaleY(.92); } }
+.cele-title { position: relative; font-size: 24px; font-weight: 900; color: #e07a10; letter-spacing: .02em; }
+.cele-sub { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.cele-score { font-family: var(--font-num); font-size: 36px; color: var(--fg); margin-top: 2px; }
+.cele-tap { font-size: 11px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .confetti, .cele-glow { display: none; } .cele-dragon, .cele-card, .hero-num b.bump { animation: none; } }
 .given-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .given-row .st { font-size: 12px; color: var(--muted); }
 .given-row .st.ok { color: var(--good, #2f8f5b); font-weight: 700; }
@@ -234,7 +278,8 @@ details.hday > summary::-webkit-details-marker { display: none; }
 <body>
 <div class="app" id="app"><div class="loading">読みこみ中…</div></div>
 <div class="toast" id="toast" hidden></div>
-<nav class="tabs" aria-label="画面の切りかえ"><div class="in" id="tabs"></div></nav>
+<nav class="tabs" aria-label="画面の切りかえ"><div class="livebar" id="livebar" hidden></div><div class="in" id="tabs"></div></nav>
+<div class="celebrate" id="celebrate" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -451,10 +496,51 @@ details.hday > summary::-webkit-details-marker { display: none; }
       <div class="num"><b>${score}</b><small>/ 100点</small></div></div>`;
   }
 
+  const goalMsg = sc => sc >= 100 ? (sc > 100 ? `100点達成！ さらに+${r1(sc - 100)}点` : "100点達成！ おめでとう！") : `あと<b>${r1(100 - sc)}</b>点で達成！`;
+  function scoreHero(sc) {
+    const pct = Math.min(100, Math.max(0, sc));
+    return `<section class="card score-hero ${sc >= 100 ? "done" : ""}" id="hero"><div class="hero-top"><span class="hero-label">今日の点数</span><span class="hero-goal">目標 100点</span></div>
+      <div class="hero-num"><b id="hero-num">${sc}</b><span>点</span></div>
+      <div class="hero-bar"><i id="hero-bar" style="width:${pct}%"></i></div>
+      <p class="hero-msg" id="hero-msg">${goalMsg(sc)}</p></section>`;
+  }
+  // refresh every place that shows today's score without rebuilding the page
+  function updateScore(bump = true) {
+    const sc = dayScore(S);
+    const n = $("#hero-num"); if (n) { n.textContent = sc; if (bump) { n.classList.remove("bump"); void n.offsetWidth; n.classList.add("bump"); } }
+    const bar = $("#hero-bar"); if (bar) bar.style.width = Math.min(100, Math.max(0, sc)) + "%";
+    const m = $("#hero-msg"); if (m) m.innerHTML = goalMsg(sc);
+    const h = $("#hero"); if (h) h.classList.toggle("done", sc >= 100);
+    const c = $("#counter"); if (c) c.innerHTML = ring(sc) + `<div>${verdict(sc)}</div>`;
+    liveBar();
+    if (sc >= 100 && !S.today.celebrated) celebrate(sc);
+  }
+  function liveBar() {
+    const lb = $("#livebar"); if (!lb) return;
+    const show = !!(S && tab === "today" && booted && !needLogin && !notMember);
+    lb.hidden = !show; document.body.classList.toggle("has-live", show);
+    if (!show) return;
+    const sc = dayScore(S);
+    lb.className = "livebar" + (sc >= 100 ? " done" : "");
+    lb.innerHTML = `<span class="lb-num"><b>${sc}</b> / 100点</span><span class="lb-bar"><i style="width:${Math.min(100, Math.max(0, sc))}%"></i></span><span class="lb-msg">${sc >= 100 ? "達成！" : `あと${r1(100 - sc)}点`}</span>`;
+  }
+  // once a day, the first time today's score reaches 100
+  function celebrate(sc) {
+    S.today.celebrated = true; persist();
+    const el = $("#celebrate");
+    const cols = ["#ffcf3f", "#ff7a59", "#5bc0eb", "#9bdb6b", "#c38bf2", "#ff9fd0"];
+    const bits = Array.from({ length: 46 }, (_, i) => `<i style="--x:${Math.round(Math.random() * 100)}%;--c:${cols[i % cols.length]};--d:${(Math.random() * .6).toFixed(2)}s;--r:${Math.round(Math.random() * 720 - 360)}deg;--s:${(.7 + Math.random() * .7).toFixed(2)}"></i>`).join("");
+    el.innerHTML = `<div class="confetti">${bits}</div><div class="cele-card" role="alert"><div class="cele-glow"></div><div class="cele-dragon">${dragonSVG(S.stage, S.color, "cele-d")}</div>
+      <div class="cele-title">本日の100点達成！</div><div class="cele-sub">おめでとう！ ${S.dragonName ? esc(S.dragonName) + "も" : "ドラゴンも"}大よろこび</div><div class="cele-score">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
+    el.hidden = false;
+    try { navigator.vibrate && navigator.vibrate([60, 40, 120]); } catch (e) {}
+    clearTimeout(celebrate.t); celebrate.t = setTimeout(closeCelebrate, 4200);
+  }
+  function closeCelebrate() { const el = $("#celebrate"); if (el) { el.hidden = true; el.innerHTML = ""; } }
   function verdict(score) {
-    if (score >= 100) return `<div class="verdict good">100点達成${score > 100 ? `（+${score - 100}点）` : ""}！このままなら連続${S.streak + 1}日目</div>`;
-    if (score > 80) return `<div class="verdict warn">あと${100 - score}点で100点。今のままなら現状維持</div>`;
-    return `<div class="verdict bad">80点以下だとドラゴンが退化します。あと${100 - score}点</div>`;
+    if (score >= 100) return `<div class="verdict good">100点達成${score > 100 ? `（+${r1(score - 100)}点）` : ""}！このままなら連続${S.streak + 1}日目</div>`;
+    if (score > 80) return `<div class="verdict warn">あと${r1(100 - score)}点で100点。今のままなら現状維持</div>`;
+    return `<div class="verdict bad">80点以下だとドラゴンが退化します。あと${r1(100 - score)}点</div>`;
   }
 
   function header() {
@@ -543,7 +629,7 @@ details.hday > summary::-webkit-details-marker { display: none; }
       : `<p class="sub">出勤したらボタンを押してください。ドラゴンが今日の課題を1つ出します。</p><button class="primary" id="checkin">出勤する</button>`;
     const last = S.lastResult ? `<p class="result-msg">前回（${shortDate(S.lastResult.date)}）：${esc(S.lastResult.msg)}</p>` : "";
     const hist = historyBlock(S.history || [], "me");
-    return `${nest()}${last}
+    return `${nest()}${scoreHero(sc)}${last}
       <section class="card"><h2>人たらし力の課題</h2>${task}</section>
       ${tasksCard()}
       <section class="card"><h2>点数カウンター</h2><div class="counter" id="counter">${ring(sc)}<div>${verdict(sc)}</div></div>
@@ -717,6 +803,7 @@ details.hday > summary::-webkit-details-marker { display: none; }
     $("#tabs").style.gridTemplateColumns = `repeat(${tabs.length}, 1fr)`;
     $("#tabs").innerHTML = tabs.map(([k, l, ic]) => `<button data-tab="${k}" ${tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("");
     growFx = false;
+    liveBar();
   }
 
   function pickTask() {
@@ -730,10 +817,10 @@ details.hday > summary::-webkit-details-marker { display: none; }
   function liveTotals(it) {
     $("#cnt-" + it.id).textContent = it.val;
     $("#sub-" + it.id).textContent = r1(it.pt * it.val) + "点";
-    const sc = dayScore(S);
-    $("#counter").innerHTML = ring(sc) + `<div>${verdict(sc)}</div>`;
+    updateScore();
   }
 
+  document.getElementById("celebrate").addEventListener("click", () => { clearTimeout(celebrate.t); closeCelebrate(); });
   document.addEventListener("click", async e => {
     const b = e.target.closest("button"); if (!b) return;
     const d = b.dataset;
@@ -813,7 +900,7 @@ details.hday > summary::-webkit-details-marker { display: none; }
     if (!S) return;
     const t = e.target, d = t.dataset;
     if (d.tdone) { const x = S.tasks.find(y => y.id === d.tdone); x.done = t.checked; render(); persist(); if (t.checked) toast("おつかれさま！"); return; }
-    if (d.gdone) { S.givenDone = { ...(S.givenDone || {}) }; if (t.checked) S.givenDone[d.gdone] = todayStr(); else delete S.givenDone[d.gdone]; render(); persist(); if (t.checked) toast("おつかれさま！"); return; }
+    if (d.gdone) { S.givenDone = { ...(S.givenDone || {}) }; if (t.checked) S.givenDone[d.gdone] = todayStr(); else delete S.givenDone[d.gdone]; render(); persist(); updateScore(false); if (t.checked) toast("おつかれさま！"); return; }
     if (d.goaldone) { const g = S.goals.find(y => y.id === d.goaldone); g.done = t.checked; render(); persist(); if (t.checked) toast("目標達成！"); return; }
     if (d.name) { S.items.find(x => x.id == d.name).name = t.value.trim() || "項目"; render(); persist(); }
     else if (d.ptin) { const it = S.items.find(x => x.id == d.ptin); it.pt = Math.max(1, Math.min(100, Number(t.value) || 1)); render(); persist(); }

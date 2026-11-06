@@ -189,6 +189,9 @@ details.staff-d .staff-row { background: transparent; }
 .field-head { padding: 12px 16px 16px; }
 .count { font-size: 13px; color: var(--muted); font-weight: 400; }
 .tally { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+.ptlabel { display: flex; align-items: center; gap: 6px; font-size: 14px; flex: 1; }
+.ptlabel input { width: 72px; flex: none; }
+.gpt { font-family: var(--font-num); color: var(--accent); font-weight: 400; }
 .given-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .given-row .st { font-size: 12px; color: var(--muted); }
 .given-row .st.ok { color: var(--good, #2f8f5b); font-weight: 700; }
@@ -269,15 +272,19 @@ details.staff-d .staff-row { background: transparent; }
   const sumItems = items => r1((items || []).reduce((a, it) => a + (Number(it.pt) || 0) * (Number(it.val) || 0), 0));
   const monthStr = () => todayStr().slice(0, 7);
   const nid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  // points from tasks シンプーさん gave, counted on the day they were checked off
+  const taskPts = (d, date) => (d.givenTasks || []).reduce((a, g) => a + ((d.givenDone || {})[g.id] === date ? Number(g.pt) || 0 : 0), 0);
+  const dayScore = d => r1(sumItems(d.items) + (d.today ? taskPts(d, d.today.date) : 0));
+  const snapDay = d => [...snapItems(d.items), ...(d.givenTasks || []).filter(g => Number(g.pt) > 0 && d.today && (d.givenDone || {})[g.id] === d.today.date).map(g => ["タスク：" + g.text, Number(g.pt), 1])];
   const snapItems = items => (items || []).filter(it => Number(it.val) > 0).map(it => [it.name, Number(it.pt) || 0, Number(it.val) || 0]);
   // every finished day for one staff record, including a day not closed yet because they haven't opened the app since
   function records(d) {
     const out = [...(d.history || [])];
     const t = todayStr();
-    if (d.today && d.today.date && d.today.date < t && (d.today.checkedIn || sumItems(d.items) > 0) && !out.some(h => h.date === d.today.date))
-      out.push({ date: d.today.date, s: sumItems(d.items), res: d.today.reflect && d.today.reflect.result || null, items: snapItems(d.items) });
-    if (d.today && d.today.date === t && (d.today.checkedIn || sumItems(d.items) > 0))
-      out.push({ date: t, s: sumItems(d.items), res: d.today.reflect && d.today.reflect.result || null, items: snapItems(d.items), live: true });
+    if (d.today && d.today.date && d.today.date < t && (d.today.checkedIn || dayScore(d) > 0) && !out.some(h => h.date === d.today.date))
+      out.push({ date: d.today.date, s: dayScore(d), res: d.today.reflect && d.today.reflect.result || null, items: snapDay(d) });
+    if (d.today && d.today.date === t && (d.today.checkedIn || dayScore(d) > 0))
+      out.push({ date: t, s: dayScore(d), res: d.today.reflect && d.today.reflect.result || null, items: snapDay(d), live: true });
     return out.sort((a, b) => a.date < b.date ? -1 : 1);
   }
   const fullDate = s => { const w = "日月火水木金土"[new Date(s + "T00:00:00").getDay()]; return `${Number(s.slice(5, 7))}月${Number(s.slice(8, 10))}日（${w}）`; };
@@ -311,7 +318,7 @@ details.staff-d .staff-row { background: transparent; }
   function rollover() {
     const t = todayStr();
     if (!S.today || S.today.date === t) return false;
-    const sc = sumItems(S.items);
+    const sc = dayScore(S);
     const worked = S.today.checkedIn || sc > 0;
     if (worked) {
       let msg;
@@ -323,7 +330,7 @@ details.staff-d .staff-row { background: transparent; }
         const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0;
         msg = before > S.stage ? `${sc}点で、${STAGES[S.stage]}に戻りました` : `${sc}点。たまごのまま、今日がんばろう`;
       } else { S.streak = 0; msg = `${sc}点で、ドラゴンは現状維持です`; }
-      S.history = [...(S.history || []), { date: S.today.date, s: sc, res: S.today.reflect?.result || null, items: snapItems(S.items) }].slice(-120);
+      S.history = [...(S.history || []), { date: S.today.date, s: sc, res: S.today.reflect?.result || null, items: snapDay(S) }].slice(-120);
       S.lastResult = { date: S.today.date, msg };
     }
     S.lastTask = S.today.task ? S.today.task.text : S.lastTask;
@@ -442,9 +449,9 @@ details.staff-d .staff-row { background: transparent; }
     return S.today.task;
   }
 
-  async function giveTask(sid, text) {
+  async function giveTask(sid, text, pt = 0) {
     const st = staffList.find(x => x.id === sid);
-    const list = [...((st && st.givenTasks) || []).filter(g => !(st.givenDone || {})[g.id] || st.givenDone[g.id] === todayStr()), { id: nid(), text, date: todayStr() }];
+    const list = [...((st && st.givenTasks) || []).filter(g => !(st.givenDone || {})[g.id] || st.givenDone[g.id] === todayStr()), { id: nid(), text, pt, date: todayStr() }];
     try { await db.doc("staff/" + sid).update({ givenTasks: list }); return true; } catch (err) { return false; }
   }
   function openGiven(d) {
@@ -454,7 +461,7 @@ details.staff-d .staff-row { background: transparent; }
 
   function tasksCard() {
     const given = openGiven(S).map(g => `<label class="check ${S.givenDone && S.givenDone[g.id] ? "done" : ""}"><input type="checkbox" data-gdone="${esc(g.id)}" ${S.givenDone && S.givenDone[g.id] ? "checked" : ""}>
-      <span><small>シンプーさんから</small>${esc(g.text)}</span><span></span></label>`).join("");
+      <span><small>シンプーさんから${Number(g.pt) > 0 ? ` ・ できたら+${g.pt}点` : ""}</small>${esc(g.text)}</span><span>${Number(g.pt) > 0 ? `<b class="gpt">+${g.pt}</b>` : ""}</span></label>`).join("");
     const mine = (S.tasks || []).map(x => `<label class="check ${x.done ? "done" : ""}"><input type="checkbox" data-tdone="${x.id}" ${x.done ? "checked" : ""}>
       <span>${esc(x.text)}</span><button class="mini" data-tdel="${x.id}" aria-label="消す">×</button></label>`).join("");
     const n = (S.tasks || []).length + openGiven(S).length;
@@ -498,7 +505,7 @@ details.staff-d .staff-row { background: transparent; }
   }
 
   function viewToday() {
-    const sc = sumItems(S.items);
+    const sc = dayScore(S);
     const items = S.items.map(it => `<div class="item"><div class="label">${esc(it.name)}<small>${it.pt}点 × <span id="cnt-${it.id}">${it.val}</span>回 = <b id="sub-${it.id}">${r1(it.pt * it.val)}点</b></small></div>
       <div class="stepper"><button class="mini" data-dec="${it.id}" aria-label="${esc(it.name)}を1回へらす">−</button>
       <input type="number" inputmode="decimal" min="0" step="any" value="${it.val}" id="val-${it.id}" data-val="${it.id}" aria-label="${esc(it.name)}の回数">
@@ -594,7 +601,7 @@ details.staff-d .staff-row { background: transparent; }
     const t = todayStr();
     const list = staffList.map(d => {
       const isToday = d.today && d.today.date === t;
-      const sc = isToday ? sumItems(d.items) : null;
+      const sc = isToday ? dayScore(d) : null;
       const tk = d.assigned && d.assigned.date === t && d.assigned.text ? d.assigned.text : (isToday && d.today.task ? d.today.task.text : "");
       const res = isToday && d.today.reflect && d.today.reflect.result ? RES[d.today.reflect.result] : "まだ";
       const status = !isToday || !d.today.checkedIn ? "未出勤" : `課題${res}`;
@@ -611,14 +618,14 @@ details.staff-d .staff-row { background: transparent; }
           <div><b>自己評価：</b>素直さ ${rt.sunao || "-"} ・ 興味 ${rt.kyomi || "-"} ・ 表現力 ${rt.hyogen || "-"}</div>
           ${hist ? `<div><b>これまでの点数</b></div><div class="log">${hist}</div>` : ""}
           ${(d.goals || []).filter(g => g.month === monthStr()).length ? `<div><b>今月の目標</b></div>${d.goals.filter(g => g.month === monthStr()).map(g => `<div class="kv"><span>${esc(g.text)}</span><span>${g.done ? "達成" : "−"}</span></div>`).join("")}` : ""}
-          ${(d.tasks || []).length || openGiven(d).length ? `<div><b>今日のタスク</b></div>${openGiven(d).map(g => `<div class="kv"><span>${esc(g.text)}（渡したタスク）</span><span>${d.givenDone && d.givenDone[g.id] ? "完了" : "−"} <button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}${(d.tasks || []).map(x => `<div class="kv"><span>${esc(x.text)}</span><span>${x.done ? "完了" : "−"}</span></div>`).join("")}` : ""}
+          ${(d.tasks || []).length || openGiven(d).length ? `<div><b>今日のタスク</b></div>${openGiven(d).map(g => `<div class="kv"><span>${esc(g.text)}（渡したタスク${Number(g.pt) > 0 ? "・" + g.pt + "点" : ""}）</span><span>${d.givenDone && d.givenDone[g.id] ? "完了" : "−"} <button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}${(d.tasks || []).map(x => `<div class="kv"><span>${esc(x.text)}</span><span>${x.done ? "完了" : "−"}</span></div>`).join("")}` : ""}
           <div class="assign"><input type="text" id="gv-${esc(d.id)}" placeholder="タスクを渡す" maxlength="60" aria-label="${esc(d.name)}さんに渡すタスク"><button class="mini" data-give="${esc(d.id)}">渡す</button></div>
           <div class="assign"><input type="text" id="as-${esc(d.id)}" placeholder="今日の課題を指定する" value="${d.assigned && d.assigned.date === t ? esc(d.assigned.text) : ""}" aria-label="${esc(d.name)}さんへの課題"><button class="mini" data-assign="${esc(d.id)}">指定</button></div>
         </div></details>`;
     }).join("");
-    const todays = staffList.filter(d => d.today && d.today.date === t && (d.today.checkedIn || sumItems(d.items) > 0));
-    const avg = todays.length ? Math.round(todays.reduce((a, d) => a + sumItems(d.items), 0) / todays.length) : 0;
-    const hit = todays.filter(d => sumItems(d.items) >= 100).length;
+    const todays = staffList.filter(d => d.today && d.today.date === t && (d.today.checkedIn || dayScore(d) > 0));
+    const avg = todays.length ? Math.round(todays.reduce((a, d) => a + dayScore(d), 0) / todays.length) : 0;
+    const hit = todays.filter(d => dayScore(d) >= 100).length;
     const memberCard = `<section class="card"><h2>メンバー</h2><p class="sub">スキるを使えるのは、ここに登録したGmailアドレスの人だけです。</p>
       <div class="checks">${members.map(m => `<div class="check"><span></span><span>${esc(m)}</span><button class="mini" data-mdel="${esc(m)}" aria-label="${esc(m)}を外す">外す</button></div>`).join("") || `<p class="sub">まだ誰も登録していません。</p>`}</div>
       <div class="addline"><input type="email" id="new-member" placeholder="例：staff@gmail.com" autocomplete="off"><button class="mini" id="add-member">追加</button></div></section>`;
@@ -643,10 +650,11 @@ details.staff-d .staff-row { background: transparent; }
         <div class="staff">${lines}</div></section>`;
     }
     const openAll = staffList.flatMap(d => openGiven(d).map(g => ({ d, g })));
-    const giveCard = staffList.length ? `<section class="card"><h2>タスクを渡す</h2><p class="sub">スタッフを選んでタスクを書くと、その人の「きょう」の画面に「シンプーさんから」と出ます。終わるまで毎日残ります。</p>
+    const giveCard = staffList.length ? `<section class="card"><h2>タスクを渡す</h2><p class="sub">スタッフを選んでタスクと点数を書くと、その人の「きょう」の画面に「シンプーさんから」と出ます。できたらチェックした日の点数に足されます。終わるまで毎日残ります。点数なしなら0にしてください。</p>
       <select id="give-to" aria-label="渡す相手"><option value="">誰に渡しますか？</option><option value="*">全員</option>${staffList.map(d => `<option value="${esc(d.id)}">${esc(d.name)}（${esc(d.job)}）</option>`).join("")}</select>
-      <div class="addline"><input type="text" id="give-text" placeholder="例：棚の商品を10点撮影" maxlength="60" aria-label="渡すタスク"><button class="mini" id="give-go">渡す</button></div>
-      ${openAll.length ? `<div><b>渡したタスク</b></div>${openAll.map(({ d, g }) => `<div class="given-row"><span><b>${esc(d.name)}</b>　${esc(g.text)}</span><span class="st ${d.givenDone && d.givenDone[g.id] ? "ok" : ""}">${d.givenDone && d.givenDone[g.id] ? "完了" : "まだ"}</span><button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}` : ""}</section>` : "";
+      <input type="text" id="give-text" placeholder="例：棚の商品を10点撮影" maxlength="60" aria-label="渡すタスク">
+      <div class="addline"><label class="ptlabel">できたら <input type="number" id="give-pt" inputmode="numeric" min="0" max="100" value="10" aria-label="できたらもらえる点数"> 点</label><button class="mini" id="give-go">渡す</button></div>
+      ${openAll.length ? `<div><b>渡したタスク</b></div>${openAll.map(({ d, g }) => `<div class="given-row"><span><b>${esc(d.name)}</b>　${esc(g.text)}${Number(g.pt) > 0 ? `（${g.pt}点）` : ""}</span><span class="st ${d.givenDone && d.givenDone[g.id] ? "ok" : ""}">${d.givenDone && d.givenDone[g.id] ? "完了" : "まだ"}</span><button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}` : ""}</section>` : "";
     return memberCard + giveCard + annCard + `<section class="card"><h2>みんなの今日</h2>
       ${staffList.length ? `<div class="row"><div class="item" style="display:block"><small style="color:var(--muted)">出勤</small><div style="font-family:var(--font-num);font-size:24px">${todays.length} / ${staffList.length}人</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">平均</small><div style="font-family:var(--font-num);font-size:24px">${avg}点</div></div>
@@ -695,7 +703,7 @@ details.staff-d .staff-row { background: transparent; }
   function liveTotals(it) {
     $("#cnt-" + it.id).textContent = it.val;
     $("#sub-" + it.id).textContent = r1(it.pt * it.val) + "点";
-    const sc = sumItems(S.items);
+    const sc = dayScore(S);
     $("#counter").innerHTML = ring(sc) + `<div>${verdict(sc)}</div>`;
   }
 
@@ -732,11 +740,11 @@ details.staff-d .staff-row { background: transparent; }
       return;
     }
     if (b.id === "give-go") {
-      const to = $("#give-to").value, inp = $("#give-text"), text = inp.value.trim();
+      const to = $("#give-to").value, inp = $("#give-text"), text = inp.value.trim(), pt = Math.max(0, Math.min(100, Math.round(Number($("#give-pt").value) || 0)));
       if (!to) { $("#give-to").focus(); toast("渡す相手を選んでください"); return; }
       if (!text) { inp.focus(); return; }
       const ids = to === "*" ? staffList.map(x => x.id) : [to];
-      let ok = 0; for (const sid of ids) { if (await giveTask(sid, text)) ok++; }
+      let ok = 0; for (const sid of ids) { if (await giveTask(sid, text, pt)) ok++; }
       if (ok) { inp.value = ""; toast(ids.length > 1 ? `${ok}人にタスクを渡しました` : "タスクを渡しました"); } else toast("渡せませんでした");
       return;
     }

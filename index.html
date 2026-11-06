@@ -122,7 +122,9 @@ textarea { min-height: 70px; resize: vertical; }
 .rate input { accent-color: var(--accent); width: 100%; }
 .rate b { font-family: var(--font-num); font-weight: 400; font-size: 18px; text-align: right; }
 
-.edit-row { display: grid; grid-template-columns: auto 1fr 56px auto; gap: 6px; align-items: center; }
+.edit-row { display: grid; grid-template-columns: auto 1fr 1fr auto; grid-template-areas: "mv nm nm nm" "mv pt un dl"; gap: 6px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.edit-row .move { grid-area: mv; } .edit-row [data-name] { grid-area: nm; } .edit-row [data-ptin] { grid-area: pt; } .edit-row [data-unit] { grid-area: un; } .edit-row [data-del] { grid-area: dl; }
+.edit-row select { padding: 10px 6px; font-size: 15px; }
 .move { display: flex; flex-direction: column; gap: 2px; }
 .move button { padding: 4px 10px; font-size: 12px; line-height: 1.2; min-width: 34px; }
 .move button:disabled { opacity: .3; }
@@ -226,7 +228,11 @@ details.staff-d .staff-row { background: transparent; }
   const pad = n => String(n).padStart(2, "0");
   const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const shortDate = s => s ? `${Number(s.slice(5, 7))}/${Number(s.slice(8, 10))}` : "";
-  const sumItems = items => (items || []).reduce((a, it) => a + (Number(it.pt) || 0) * (Number(it.val) || 0), 0);
+  const r1 = n => Math.round(n * 10) / 10;
+  const isHour = it => it.unit === "時間";
+  const unitOf = it => isHour(it) ? "時間" : "回";
+  const stepOf = it => isHour(it) ? 0.5 : 1;
+  const sumItems = items => r1((items || []).reduce((a, it) => a + (Number(it.pt) || 0) * (Number(it.val) || 0), 0));
   const monthStr = () => todayStr().slice(0, 7);
   const nid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const tone = s => s >= 100 ? "good" : s > 80 ? "warn" : "bad";
@@ -441,10 +447,10 @@ details.staff-d .staff-row { background: transparent; }
 
   function viewToday() {
     const sc = sumItems(S.items);
-    const items = S.items.map(it => `<div class="item"><div class="label">${esc(it.name)}<small>${it.pt}点 × <span id="cnt-${it.id}">${it.val}</span>回 = <b id="sub-${it.id}">${it.pt * it.val}点</b></small></div>
-      <div class="stepper"><button class="mini" data-dec="${it.id}" aria-label="${esc(it.name)}を1回へらす">−</button>
-      <input type="number" inputmode="numeric" min="0" value="${it.val}" id="val-${it.id}" data-val="${it.id}" aria-label="${esc(it.name)}の回数">
-      <button class="mini" data-inc="${it.id}" aria-label="${esc(it.name)}を1回ふやす">＋</button></div></div>`).join("");
+    const items = S.items.map(it => `<div class="item"><div class="label">${esc(it.name)}<small>${it.pt}点 × <span id="cnt-${it.id}">${it.val}</span>${unitOf(it)} = <b id="sub-${it.id}">${r1(it.pt * it.val)}点</b></small></div>
+      <div class="stepper"><button class="mini" data-dec="${it.id}" aria-label="${esc(it.name)}を${stepOf(it)}${unitOf(it)}へらす">−</button>
+      <input type="number" inputmode="${isHour(it) ? "decimal" : "numeric"}" min="0" step="${stepOf(it)}" value="${it.val}" id="val-${it.id}" data-val="${it.id}" aria-label="${esc(it.name)}の${isHour(it) ? "時間" : "回数"}">
+      <button class="mini" data-inc="${it.id}" aria-label="${esc(it.name)}を${stepOf(it)}${unitOf(it)}ふやす">＋</button></div></div>`).join("");
     const tk = currentTask();
     const task = S.today.checkedIn && tk
       ? `<div class="task"><span class="el">今日の課題 ・ ${tk.el === "assigned" ? "シンプーさんから" : ELS[tk.el]}</span><p>${esc(tk.text)}</p></div><p class="sub">夜に「ふりかえり」でできたかを記録してください。</p>`
@@ -464,11 +470,12 @@ details.staff-d .staff-row { background: transparent; }
   function viewItems() {
     const last = S.items.length - 1;
     const rows = S.items.map((it, i) => `<div class="edit-row"><div class="move"><button class="mini" data-up="${it.id}" aria-label="${esc(it.name)}を上へ"${i === 0 ? " disabled" : ""}>▲</button><button class="mini" data-down="${it.id}" aria-label="${esc(it.name)}を下へ"${i === last ? " disabled" : ""}>▼</button></div><input type="text" id="name-${it.id}" data-name="${it.id}" value="${esc(it.name)}" aria-label="項目名">
-      <input type="number" id="pt-${it.id}" data-ptin="${it.id}" min="1" max="100" value="${it.pt}" aria-label="1回の点数">
+      <input type="number" id="pt-${it.id}" data-ptin="${it.id}" min="1" max="100" value="${it.pt}" aria-label="${esc(it.name)}の点数">
+      <select data-unit="${it.id}" aria-label="${esc(it.name)}の数え方"><option value="回"${isHour(it) ? "" : " selected"}>点 / 1回</option><option value="時間"${isHour(it) ? " selected" : ""}>点 / 1時間</option></select>
       <button class="mini" data-del="${it.id}" aria-label="${esc(it.name)}を消す">消す</button></div>`).join("");
-    return `<section class="card"><h2>点数項目</h2><p class="sub">自分の仕事に合わせて、項目と「1回あたりの点数」を決めます。例：出品1件で5点なら、23件で115点です。シンプーさんはこの内容を確認できます。</p>
+    return `<section class="card"><h2>点数項目</h2><p class="sub">自分の仕事に合わせて、項目と「1回あたりの点数」を決めます。例：出品1件で5点なら、23件で115点です。作業時間で点数がつく項目は「点 / 1時間」にすると、30分なら0.5のように入れられます。シンプーさんはこの内容を確認できます。</p>
       <p class="sub">▲▼で順番を入れかえられます。よく使う項目を上にすると「きょう」の画面でも上に出ます。</p>
-      <div class="edit-row" style="font-size:12px;color:var(--muted)"><span>順番</span><span>項目</span><span>1回の点数</span><span></span></div>${rows}
+      <p class="sub" style="font-size:12px">各項目：上の段が項目名、下の段が「点数」と「1回ごと・1時間ごと」の選択です。</p>${rows}
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
@@ -508,7 +515,7 @@ details.staff-d .staff-row { background: transparent; }
       const tk = d.assigned && d.assigned.date === t && d.assigned.text ? d.assigned.text : (isToday && d.today.task ? d.today.task.text : "");
       const res = isToday && d.today.reflect && d.today.reflect.result ? RES[d.today.reflect.result] : "まだ";
       const status = !isToday || !d.today.checkedIn ? "未出勤" : `課題${res}`;
-      const items = (d.items || []).map(it => `<div class="kv"><span>${esc(it.name)}（${it.pt}点）</span><span>${isToday ? it.val : 0}回 = ${isToday ? it.pt * it.val : 0}点</span></div>`).join("");
+      const items = (d.items || []).map(it => `<div class="kv"><span>${esc(it.name)}（${it.pt}点/${unitOf(it)}）</span><span>${isToday ? it.val : 0}${unitOf(it)} = ${isToday ? r1(it.pt * it.val) : 0}点</span></div>`).join("");
       const hist = (d.history || []).slice(-7).map(h => `<span>${shortDate(h.date)} ${h.s}</span>`).join("");
       const rt = d.ratings || {};
       return `<details class="staff-d"><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", d.streak || 0)}
@@ -579,7 +586,7 @@ details.staff-d .staff-row { background: transparent; }
 
   function liveTotals(it) {
     $("#cnt-" + it.id).textContent = it.val;
-    $("#sub-" + it.id).textContent = it.pt * it.val + "点";
+    $("#sub-" + it.id).textContent = r1(it.pt * it.val) + "点";
     const sc = sumItems(S.items);
     $("#counter").innerHTML = ring(sc) + `<div>${verdict(sc)}</div>`;
   }
@@ -633,8 +640,8 @@ details.staff-d .staff-row { background: transparent; }
     if (b.id === "add-goal") { const v = $("#new-goal").value.trim(); if (!v) return; S.goals = [...(S.goals || []), { id: nid(), text: v, month: monthStr(), done: false }]; render(); persist(); return; }
     if (d.goaldel) { S.goals = S.goals.filter(x => x.id !== d.goaldel); render(); persist(); return; }
     if (b.id === "checkin") { S.today.checkedIn = true; S.today.task = pickTask(); render(); persist(); toast("今日の課題が出ました"); return; }
-    if (d.dec) { const it = S.items.find(x => x.id == d.dec); it.val = Math.max(0, (Number(it.val) || 0) - 1); $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
-    if (d.inc) { const it = S.items.find(x => x.id == d.inc); it.val = (Number(it.val) || 0) + 1; $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
+    if (d.dec) { const it = S.items.find(x => x.id == d.dec); it.val = Math.max(0, r1((Number(it.val) || 0) - stepOf(it))); $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
+    if (d.inc) { const it = S.items.find(x => x.id == d.inc); it.val = r1((Number(it.val) || 0) + stepOf(it)); $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
     if (d.up || d.down) {
       const i = S.items.findIndex(x => x.id == (d.up || d.down)), j = d.up ? i - 1 : i + 1;
       if (i < 0 || j < 0 || j >= S.items.length) return;
@@ -655,6 +662,7 @@ details.staff-d .staff-row { background: transparent; }
     if (d.gdone) { S.givenDone = { ...(S.givenDone || {}) }; if (t.checked) S.givenDone[d.gdone] = todayStr(); else delete S.givenDone[d.gdone]; render(); persist(); if (t.checked) toast("おつかれさま！"); return; }
     if (d.goaldone) { const g = S.goals.find(y => y.id === d.goaldone); g.done = t.checked; render(); persist(); if (t.checked) toast("目標達成！"); return; }
     if (d.name) { S.items.find(x => x.id == d.name).name = t.value.trim() || "項目"; render(); persist(); }
+    else if (d.unit) { const it = S.items.find(x => x.id == d.unit); it.unit = t.value; if (!isHour(it)) it.val = Math.floor(Number(it.val) || 0); render(); persist(); }
     else if (d.ptin) { const it = S.items.find(x => x.id == d.ptin); it.pt = Math.max(1, Math.min(100, Number(t.value) || 1)); render(); persist(); }
     else if (t.id === "set-name") { S.name = t.value.trim() || S.name; render(); persist(); }
     else if (t.id === "set-job") { S.job = t.value; render(); persist(); }
@@ -663,7 +671,7 @@ details.staff-d .staff-row { background: transparent; }
   document.addEventListener("input", e => {
     if (!S) return;
     const t = e.target;
-    if (t.dataset.val) { const it = S.items.find(x => x.id == t.dataset.val); it.val = Math.max(0, Math.floor(Number(t.value) || 0)); liveTotals(it); persist(); }
+    if (t.dataset.val) { const it = S.items.find(x => x.id == t.dataset.val); it.val = Math.max(0, isHour(it) ? Math.round((Number(t.value) || 0) * 100) / 100 : Math.floor(Number(t.value) || 0)); liveTotals(it); persist(); }
     else if (t.dataset.rate) { S.ratings[t.dataset.rate] = Number(t.value); t.nextElementSibling.textContent = t.value; persist(); }
     else if (t.id === "note") { S.today.reflect.note = t.value; persist(); }
   });

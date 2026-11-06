@@ -59,10 +59,11 @@ body {
 header.top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .logo { font-weight: 900; font-size: 26px; letter-spacing: .04em; }
 .logo span { color: var(--accent); }
-.brand { display: flex; align-items: center; gap: 8px; }
+.brand { display: flex; align-items: center; gap: 8px; flex: none; }
+.logo { white-space: nowrap; }
 .app-icon { width: 40px; height: 40px; border-radius: 12px; display: block; box-shadow: 0 0 0 1px var(--line); }
 .hero-icon { width: 180px; max-width: 100%; height: auto; border-radius: 32px; display: block; margin: 0 auto; }
-.who { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.who { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); min-width: 0; text-align: right; }
 .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; flex: none; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
 .badge { font-size: 11px; letter-spacing: .08em; background: var(--accent-soft); color: var(--accent); border-radius: 99px; padding: 2px 8px; font-weight: 700; }
 
@@ -121,7 +122,10 @@ textarea { min-height: 70px; resize: vertical; }
 .rate input { accent-color: var(--accent); width: 100%; }
 .rate b { font-family: var(--font-num); font-weight: 400; font-size: 18px; text-align: right; }
 
-.edit-row { display: grid; grid-template-columns: 1fr 64px auto; gap: 6px; align-items: center; }
+.edit-row { display: grid; grid-template-columns: auto 1fr 56px auto; gap: 6px; align-items: center; }
+.move { display: flex; flex-direction: column; gap: 2px; }
+.move button { padding: 4px 10px; font-size: 12px; line-height: 1.2; min-width: 34px; }
+.move button:disabled { opacity: .3; }
 .sum { font-size: 13px; color: var(--muted); }
 .sum b { font-family: var(--font-num); font-weight: 400; font-size: 17px; color: var(--fg); }
 .sum.off b { color: var(--bad); }
@@ -458,11 +462,13 @@ details.staff-d .staff-row { background: transparent; }
   }
 
   function viewItems() {
-    const rows = S.items.map(it => `<div class="edit-row"><input type="text" id="name-${it.id}" data-name="${it.id}" value="${esc(it.name)}" aria-label="項目名">
+    const last = S.items.length - 1;
+    const rows = S.items.map((it, i) => `<div class="edit-row"><div class="move"><button class="mini" data-up="${it.id}" aria-label="${esc(it.name)}を上へ"${i === 0 ? " disabled" : ""}>▲</button><button class="mini" data-down="${it.id}" aria-label="${esc(it.name)}を下へ"${i === last ? " disabled" : ""}>▼</button></div><input type="text" id="name-${it.id}" data-name="${it.id}" value="${esc(it.name)}" aria-label="項目名">
       <input type="number" id="pt-${it.id}" data-ptin="${it.id}" min="1" max="100" value="${it.pt}" aria-label="1回の点数">
       <button class="mini" data-del="${it.id}" aria-label="${esc(it.name)}を消す">消す</button></div>`).join("");
     return `<section class="card"><h2>点数項目</h2><p class="sub">自分の仕事に合わせて、項目と「1回あたりの点数」を決めます。例：出品1件で5点なら、23件で115点です。シンプーさんはこの内容を確認できます。</p>
-      <div class="edit-row" style="font-size:12px;color:var(--muted)"><span>項目</span><span>1回の点数</span><span></span></div>${rows}
+      <p class="sub">▲▼で順番を入れかえられます。よく使う項目を上にすると「きょう」の画面でも上に出ます。</p>
+      <div class="edit-row" style="font-size:12px;color:var(--muted)"><span>順番</span><span>項目</span><span>1回の点数</span><span></span></div>${rows}
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
@@ -629,6 +635,13 @@ details.staff-d .staff-row { background: transparent; }
     if (b.id === "checkin") { S.today.checkedIn = true; S.today.task = pickTask(); render(); persist(); toast("今日の課題が出ました"); return; }
     if (d.dec) { const it = S.items.find(x => x.id == d.dec); it.val = Math.max(0, (Number(it.val) || 0) - 1); $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
     if (d.inc) { const it = S.items.find(x => x.id == d.inc); it.val = (Number(it.val) || 0) + 1; $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
+    if (d.up || d.down) {
+      const i = S.items.findIndex(x => x.id == (d.up || d.down)), j = d.up ? i - 1 : i + 1;
+      if (i < 0 || j < 0 || j >= S.items.length) return;
+      const a = [...S.items]; [a[i], a[j]] = [a[j], a[i]]; S.items = a; render(); persist();
+      const again = document.querySelector(`[data-${d.up ? "up" : "down"}="${a[j].id}"]`); if (again && !again.disabled) again.focus();
+      return;
+    }
     if (d.del) { S.items = S.items.filter(x => x.id != d.del); render(); persist(); return; }
     if (b.id === "additem") { const id = Math.max(0, ...S.items.map(x => x.id)) + 1; S.items.push({ id, name: "新しい項目", pt: 5, val: 0 }); render(); persist(); $("#name-" + id).focus(); return; }
     if (d.color) { S.color = d.color; render(); persist(); toast("ドラゴンの色を変えました"); return; }

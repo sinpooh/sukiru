@@ -189,6 +189,9 @@ details.staff-d .staff-row { background: transparent; }
 .field-head { padding: 12px 16px 16px; }
 .count { font-size: 13px; color: var(--muted); font-weight: 400; }
 .tally { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+.given-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.given-row .st { font-size: 12px; color: var(--muted); }
+.given-row .st.ok { color: var(--good, #2f8f5b); font-weight: 700; }
 .rank { font-family: var(--font-num); font-size: 20px; min-width: 1.4em; text-align: center; }
 .ann-sum { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 .ann-sum b { font-family: var(--font-num); font-size: 18px; color: var(--fg); font-weight: 400; }
@@ -439,6 +442,11 @@ details.staff-d .staff-row { background: transparent; }
     return S.today.task;
   }
 
+  async function giveTask(sid, text) {
+    const st = staffList.find(x => x.id === sid);
+    const list = [...((st && st.givenTasks) || []).filter(g => !(st.givenDone || {})[g.id] || st.givenDone[g.id] === todayStr()), { id: nid(), text, date: todayStr() }];
+    try { await db.doc("staff/" + sid).update({ givenTasks: list }); return true; } catch (err) { return false; }
+  }
   function openGiven(d) {
     const done = d.givenDone || {};
     return (d.givenTasks || []).filter(g => !done[g.id] || done[g.id] === todayStr());
@@ -634,7 +642,12 @@ details.staff-d .staff-row { background: transparent; }
         <div class="ann-sum"><span>${rows.length}人</span><span>平均 <b>${avgA}</b>点</span><span>100点 <b>${hit}</b>人</span></div>
         <div class="staff">${lines}</div></section>`;
     }
-    return memberCard + annCard + `<section class="card"><h2>みんなの今日</h2>
+    const openAll = staffList.flatMap(d => openGiven(d).map(g => ({ d, g })));
+    const giveCard = staffList.length ? `<section class="card"><h2>タスクを渡す</h2><p class="sub">スタッフを選んでタスクを書くと、その人の「きょう」の画面に「シンプーさんから」と出ます。終わるまで毎日残ります。</p>
+      <select id="give-to" aria-label="渡す相手"><option value="">誰に渡しますか？</option><option value="*">全員</option>${staffList.map(d => `<option value="${esc(d.id)}">${esc(d.name)}（${esc(d.job)}）</option>`).join("")}</select>
+      <div class="addline"><input type="text" id="give-text" placeholder="例：棚の商品を10点撮影" maxlength="60" aria-label="渡すタスク"><button class="mini" id="give-go">渡す</button></div>
+      ${openAll.length ? `<div><b>渡したタスク</b></div>${openAll.map(({ d, g }) => `<div class="given-row"><span><b>${esc(d.name)}</b>　${esc(g.text)}</span><span class="st ${d.givenDone && d.givenDone[g.id] ? "ok" : ""}">${d.givenDone && d.givenDone[g.id] ? "完了" : "まだ"}</span><button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}` : ""}</section>` : "";
+    return memberCard + giveCard + annCard + `<section class="card"><h2>みんなの今日</h2>
       ${staffList.length ? `<div class="row"><div class="item" style="display:block"><small style="color:var(--muted)">出勤</small><div style="font-family:var(--font-num);font-size:24px">${todays.length} / ${staffList.length}人</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">平均</small><div style="font-family:var(--font-num);font-size:24px">${avg}点</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">100点</small><div style="font-family:var(--font-num);font-size:24px">${hit}人</div></div></div>
@@ -718,11 +731,18 @@ details.staff-d .staff-row { background: transparent; }
       catch (err) { toast("指定できませんでした"); }
       return;
     }
+    if (b.id === "give-go") {
+      const to = $("#give-to").value, inp = $("#give-text"), text = inp.value.trim();
+      if (!to) { $("#give-to").focus(); toast("渡す相手を選んでください"); return; }
+      if (!text) { inp.focus(); return; }
+      const ids = to === "*" ? staffList.map(x => x.id) : [to];
+      let ok = 0; for (const sid of ids) { if (await giveTask(sid, text)) ok++; }
+      if (ok) { inp.value = ""; toast(ids.length > 1 ? `${ok}人にタスクを渡しました` : "タスクを渡しました"); } else toast("渡せませんでした");
+      return;
+    }
     if (d.give) {
       const inp = $("#gv-" + d.give); const text = inp.value.trim(); if (!text) { inp.focus(); return; }
-      const st = staffList.find(x => x.id === d.give);
-      const list = [...((st && st.givenTasks) || []).filter(g => !(st.givenDone || {})[g.id] || st.givenDone[g.id] === todayStr()), { id: nid(), text, date: todayStr() }];
-      try { await db.doc("staff/" + d.give).update({ givenTasks: list }); inp.value = ""; toast("タスクを渡しました"); } catch (err) { toast("渡せませんでした"); }
+      if (await giveTask(d.give, text)) { inp.value = ""; toast("タスクを渡しました"); } else toast("渡せませんでした");
       return;
     }
     if (d.gdel) {

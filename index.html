@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DotGothic16&family=Shippori+Mincho:wght@700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <style>
 * { box-sizing: border-box; }
 html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); -webkit-text-size-adjust: 100%; }
@@ -283,6 +283,39 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 .cele-score { font-family: var(--font-num); font-size: 36px; color: var(--fg); margin-top: 2px; }
 .cele-tap { font-size: 11px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .confetti, .cele-glow, .cele-rays, .cele-fire { display: none; } .cele-dragon, .cele-card, .hero-num b.bump, .ring .num b.bump { animation: none !important; } }
+/* antique counter */
+.counter-card { background:
+  radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.35), transparent 60%),
+  radial-gradient(140% 120% at 50% 50%, transparent 55%, rgba(90,55,20,.28)),
+  linear-gradient(160deg, #f4e4bf, #e6cd96 55%, #d9bb7c); color: #3a2814; border: 2px solid #8a6230; box-shadow: inset 0 0 0 4px #f4e4bf, inset 0 0 0 5px #8a6230, 0 6px 18px rgba(60,35,10,.18); }
+.counter-card h2 { font-family: "Shippori Mincho", serif; font-weight: 800; letter-spacing: .12em; text-align: center; color: #4a2f12; display: flex; justify-content: center; gap: 10px; }
+.counter-card h2 .orn { color: #a8752e; font-size: 14px; align-self: center; }
+.counter-card .sub { color: #6b5233; }
+.counter-card .item { background: rgba(255, 250, 235, .55); border: 1px solid rgba(138, 98, 48, .35); }
+.counter-card .item .label { color: #3a2814; } .counter-card .item .label small { color: #6b5233; }
+.counter-card .verdict { font-family: "Shippori Mincho", serif; font-weight: 800; }
+.counter-card .verdict.good { color: #2f6b3a; } .counter-card .verdict.warn { color: #8a5a12; } .counter-card .verdict.bad { color: #8e2a1c; }
+.ring.antique { width: 220px; height: 220px; filter: drop-shadow(0 6px 10px rgba(60,35,10,.35)); }
+.ring.antique::before { display: none; }
+.ring.antique .ticks line { stroke: #d9b062; }
+.ring.antique .rivets circle { fill: #f3dc9a; stroke: #6e4a1c; stroke-width: .8; }
+.ring.antique .dialnum text { fill: rgba(232,199,122,.55); font-family: Cinzel, serif; font-size: 8px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+.ring.antique .arc { filter: drop-shadow(0 0 3px rgba(255, 210, 120, .6)); }
+.ring.antique .num b { font-family: Cinzel, "Shippori Mincho", serif; font-weight: 900; font-size: 54px; color: #f3d67e; text-shadow: 0 2px 0 #5a3a10, 0 0 12px rgba(255, 200, 90, .35); letter-spacing: .02em; }
+.ring.antique .num small { font-family: "Shippori Mincho", serif; color: #d9b062; font-size: 12px; }
+.ring.antique .num .lbl { letter-spacing: .25em; font-size: 11px; }
+.ring.antique.done::after { box-shadow: 0 0 30px 6px rgba(255, 196, 60, .55); }
+.remain.ribbon { position: relative; border-radius: 4px; padding: 6px 26px; background: linear-gradient(180deg, #9b2a1e, #6e1a12); color: #f6e2a8; font-family: "Shippori Mincho", serif; box-shadow: 0 3px 0 #4a120c, inset 0 0 0 1px rgba(246, 226, 168, .35); }
+.remain.ribbon::before, .remain.ribbon::after { content: ""; position: absolute; top: 6px; width: 18px; height: 100%; background: #5a140e; z-index: -1; }
+.remain.ribbon::before { left: -12px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 40% 50%); }
+.remain.ribbon::after { right: -12px; clip-path: polygon(0 0, 100% 0, 60% 50%, 100% 100%, 0 100%); }
+.remain.ribbon b { font-family: Cinzel, serif; font-weight: 900; color: #ffd76a; font-size: 30px; }
+.remain.ribbon.done { background: linear-gradient(180deg, #c8902c, #8a5a12); color: #fff6d8; box-shadow: 0 3px 0 #5a3a10, inset 0 0 0 1px rgba(255,246,216,.4); }
+.remain.ribbon.done::before, .remain.ribbon.done::after { background: #6e4a1c; }
+.remain.ribbon.done b { color: #fff6d8; }
+.counter { isolation: isolate; }
+.counter-card .stepper button, .counter-card .stepper input { background: #fbf0d4; border-color: #b58a4a; color: #3a2814; }
+.counter-card .stepper input { font-family: Cinzel, serif; font-weight: 700; }
 .given-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .given-row .st { font-size: 12px; color: var(--muted); }
 .given-row .st.ok { color: var(--good, #2f8f5b); font-weight: 700; }
@@ -528,18 +561,26 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   }
 
   function ring(score) {
-    const r = 74, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, score / 100));
-    const done = score >= 100, mid = score > 80;
-    const g = done ? ["#ffd34d", "#f2b630", "#3fa36b"] : mid ? ["#ffcf6b", "#f29a30", "#e0782a"] : ["#ff9a76", "#f0683f", "#d84a3a"];
-    const ticks = Array.from({ length: 20 }, (_, i) => { const a = i / 20 * 2 * Math.PI; const x1 = 90 + Math.cos(a) * 88, y1 = 90 + Math.sin(a) * 88, x2 = 90 + Math.cos(a) * 84, y2 = 90 + Math.sin(a) * 84; return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`; }).join("");
-    return `<div class="ring ${done ? "done" : ""}"><svg viewBox="0 0 180 180"><defs><linearGradient id="ringg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g[0]}"/><stop offset=".5" stop-color="${g[1]}"/><stop offset="1" stop-color="${g[2]}"/></linearGradient></defs>
-      <g class="ticks">${ticks}</g><circle cx="90" cy="90" r="${r}" fill="none" stroke="var(--line)" stroke-width="16"/>
-      <circle class="arc" cx="90" cy="90" r="${r}" fill="none" stroke="url(#ringg)" stroke-width="16" stroke-linecap="round" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}"/></svg>
-      <div class="num"><small class="lbl">今日の点数</small><b id="ring-num">${score}</b><small>/ 100点</small></div></div>`;
+    const r = 70, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, score / 100)), done = score >= 100;
+    const pt = (a, rad) => [90 + Math.cos(a) * rad, 90 + Math.sin(a) * rad].map(v => v.toFixed(1));
+    const ticks = Array.from({ length: 40 }, (_, i) => { const a = i / 40 * 2 * Math.PI, big = i % 4 === 0; const [x1, y1] = pt(a, 86), [x2, y2] = pt(a, big ? 79 : 82); return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke-width="${big ? 2 : 1}"/>`; }).join("");
+    const rivets = Array.from({ length: 8 }, (_, i) => { const [x, y] = pt(i / 8 * 2 * Math.PI + Math.PI / 8, 90.5); return `<circle cx="${x}" cy="${y}" r="2.4"/>`; }).join("");
+    const nums = ["0", "25", "50", "75"].map((n, i) => { const [x, y] = pt(i / 4 * 2 * Math.PI, 59); return `<text x="${x}" y="${y}" transform="rotate(90 ${x} ${y})">${n}</text>`; }).join("");
+    return `<div class="ring antique ${done ? "done" : ""}"><svg viewBox="0 0 180 180"><defs>
+      <linearGradient id="brz" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8c77a"/><stop offset=".35" stop-color="#a8752e"/><stop offset=".6" stop-color="#d9b062"/><stop offset="1" stop-color="#6e4a1c"/></linearGradient>
+      <linearGradient id="gld" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8a5a12"/><stop offset=".45" stop-color="#f6d77a"/><stop offset=".7" stop-color="#fff2c0"/><stop offset="1" stop-color="#c8902c"/></linearGradient>
+      <radialGradient id="stone" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#4a3a2a"/><stop offset="1" stop-color="#1f1710"/></radialGradient></defs>
+      <circle cx="90" cy="90" r="89" fill="url(#brz)"/><circle cx="90" cy="90" r="83" fill="#2a2016"/>
+      <g class="ticks">${ticks}</g><g class="rivets">${rivets}</g>
+      <circle cx="90" cy="90" r="${r}" fill="none" stroke="#3b2d1f" stroke-width="12"/>
+      <circle class="arc" cx="90" cy="90" r="${r}" fill="none" stroke="url(#gld)" stroke-width="12" stroke-linecap="butt" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}"/>
+      <circle cx="90" cy="90" r="62" fill="url(#stone)" stroke="#a8752e" stroke-width="1.5"/><circle cx="90" cy="90" r="58" fill="none" stroke="rgba(232,199,122,.35)" stroke-width=".8" stroke-dasharray="2 3"/>
+      <g class="dialnum">${nums}</g></svg>
+      <div class="num"><small class="lbl">本日の得点</small><b id="ring-num">${score}</b><small>／ 百点</small></div></div>`;
   }
   function counterHTML(sc) {
-    const remain = sc >= 100 ? `<div class="remain done"><span>100点達成！</span>${sc > 100 ? `<b>+${r1(sc - 100)}</b><span>点</span>` : ""}</div>`
-      : `<div class="remain"><span>のこり</span><b>${r1(100 - sc)}</b><span>点</span></div>`;
+    const remain = sc >= 100 ? `<div class="remain ribbon done"><span>百点達成</span>${sc > 100 ? `<b>+${r1(sc - 100)}</b><span>点</span>` : ""}</div>`
+      : `<div class="remain ribbon"><span>残り</span><b>${r1(100 - sc)}</b><span>点</span></div>`;
     return `${ring(sc)}${remain}${verdict(sc)}`;
   }
 
@@ -688,7 +729,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     return `${nest()}${last}
       <section class="card"><h2>人たらし力の課題</h2>${task}</section>
       ${tasksCard()}
-      <section class="card"><h2>点数カウンター</h2><div class="counter" id="counter">${counterHTML(sc)}</div>
+      <section class="card counter-card"><h2><span class="orn">❖</span>点数カウンター<span class="orn">❖</span></h2><div class="counter" id="counter">${counterHTML(sc)}</div>
         <p class="sub">やった回数は、数字の欄をタップして直接入力するか（0.5のような数字も入れられます）、＋−で変えます。日付が変わると、その日の点数でドラゴンが育ちます。</p>
         <div class="items">${items}</div></section>
       ${goalsCard()}

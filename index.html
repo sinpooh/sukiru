@@ -140,6 +140,7 @@ textarea { min-height: 70px; resize: vertical; }
 .staff-row svg { width: 44px; height: 44px; }
 .staff-row .nm { min-width: 0; font-weight: 700; font-size: 14px; }
 .staff-row .nm small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.staff-row.ranked { grid-template-columns: 1.6em 44px 1fr auto; }
 .pill { font-family: var(--font-num); font-size: 16px; padding: 2px 10px; border-radius: 99px; font-variant-numeric: tabular-nums; }
 .pill.good { background: color-mix(in oklab, var(--good) 18%, transparent); color: var(--good); }
 .pill.warn { background: color-mix(in oklab, var(--warn) 18%, transparent); color: var(--warn); }
@@ -188,6 +189,9 @@ details.staff-d .staff-row { background: transparent; }
 .field-head { padding: 12px 16px 16px; }
 .count { font-size: 13px; color: var(--muted); font-weight: 400; }
 .tally { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+.rank { font-family: var(--font-num); font-size: 20px; min-width: 1.4em; text-align: center; }
+.ann-sum { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.ann-sum b { font-family: var(--font-num); font-size: 18px; color: var(--fg); font-weight: 400; }
 .tally span { background: var(--bg); border-radius: 99px; padding: 3px 10px; }
 .tally b { color: var(--fg); }
 .book { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -256,6 +260,18 @@ details.staff-d .staff-row { background: transparent; }
   const sumItems = items => r1((items || []).reduce((a, it) => a + (Number(it.pt) || 0) * (Number(it.val) || 0), 0));
   const monthStr = () => todayStr().slice(0, 7);
   const nid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const snapItems = items => (items || []).filter(it => Number(it.val) > 0).map(it => [it.name, Number(it.pt) || 0, Number(it.val) || 0]);
+  // every finished day for one staff record, including a day not closed yet because they haven't opened the app since
+  function records(d) {
+    const out = [...(d.history || [])];
+    const t = todayStr();
+    if (d.today && d.today.date && d.today.date < t && (d.today.checkedIn || sumItems(d.items) > 0) && !out.some(h => h.date === d.today.date))
+      out.push({ date: d.today.date, s: sumItems(d.items), res: d.today.reflect && d.today.reflect.result || null, items: snapItems(d.items) });
+    if (d.today && d.today.date === t && (d.today.checkedIn || sumItems(d.items) > 0))
+      out.push({ date: t, s: sumItems(d.items), res: d.today.reflect && d.today.reflect.result || null, items: snapItems(d.items), live: true });
+    return out.sort((a, b) => a.date < b.date ? -1 : 1);
+  }
+  const fullDate = s => { const w = "日月火水木金土"[new Date(s + "T00:00:00").getDay()]; return `${Number(s.slice(5, 7))}月${Number(s.slice(8, 10))}日（${w}）`; };
   const tone = s => s >= 100 ? "good" : s > 80 ? "warn" : "bad";
 
   // ---- state ----
@@ -265,6 +281,7 @@ details.staff-d .staff-row { background: transparent; }
   let staffLoaded = false;
   let dragons = [], dragonsLoaded = false, lastPublic = "";
   let tab = "today";
+  let annDate = null;
   let growFx = false;
   let banner = "";
   let booted = false;
@@ -297,7 +314,7 @@ details.staff-d .staff-row { background: transparent; }
         const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0;
         msg = before > S.stage ? `${sc}点で、${STAGES[S.stage]}に戻りました` : `${sc}点。たまごのまま、今日がんばろう`;
       } else { S.streak = 0; msg = `${sc}点で、ドラゴンは現状維持です`; }
-      S.history = [...(S.history || []), { date: S.today.date, s: sc, res: S.today.reflect?.result || null }].slice(-60);
+      S.history = [...(S.history || []), { date: S.today.date, s: sc, res: S.today.reflect?.result || null, items: snapItems(S.items) }].slice(-120);
       S.lastResult = { date: S.today.date, msg };
     }
     S.lastTask = S.today.task ? S.today.task.text : S.lastTask;
@@ -477,7 +494,7 @@ details.staff-d .staff-row { background: transparent; }
       ? `<div class="task"><span class="el">今日の課題 ・ ${tk.el === "assigned" ? "シンプーさんから" : ELS[tk.el]}</span><p>${esc(tk.text)}</p></div><p class="sub">夜に「ふりかえり」でできたかを記録してください。</p>`
       : `<p class="sub">出勤したらボタンを押してください。ドラゴンが今日の課題を1つ出します。</p><button class="primary" id="checkin">出勤する</button>`;
     const last = S.lastResult ? `<p class="result-msg">前回（${shortDate(S.lastResult.date)}）：${esc(S.lastResult.msg)}</p>` : "";
-    const hist = (S.history || []).slice(-7).map(h => `<span>${shortDate(h.date)} ${h.s}</span>`).join("");
+    const hist = (S.history || []).slice(-14).reverse().map(h => `<span>${shortDate(h.date)} ${h.s}点</span>`).join("");
     return `${nest()}${last}
       <section class="card"><h2>人たらし力の課題</h2>${task}</section>
       ${tasksCard()}
@@ -519,7 +536,7 @@ details.staff-d .staff-row { background: transparent; }
 
   // field spots (x%, y%) from back to front
   const SPOTS = [[14,66],[40,63],[64,66],[88,64],[26,78],[54,77],[78,80],[10,90],[40,92],[66,93],[90,92],[24,66]];
-  const SIZE = [34, 46, 60, 78];
+  const SIZE = [68, 46, 60, 78];
   function viewAll() {
     if (!dragonsLoaded) return `<div class="loading">みんなのドラゴンを読みこみ中…</div>`;
     const list = [...dragons].sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -568,7 +585,7 @@ details.staff-d .staff-row { background: transparent; }
       const res = isToday && d.today.reflect && d.today.reflect.result ? RES[d.today.reflect.result] : "まだ";
       const status = !isToday || !d.today.checkedIn ? "未出勤" : `課題${res}`;
       const items = (d.items || []).map(it => `<div class="kv"><span>${esc(it.name)}（${it.pt}点）</span><span>${isToday ? it.val : 0}回 = ${isToday ? r1(it.pt * it.val) : 0}点</span></div>`).join("");
-      const hist = (d.history || []).slice(-7).map(h => `<span>${shortDate(h.date)} ${h.s}</span>`).join("");
+      const hist = records(d).filter(h => !h.live).slice(-14).reverse().map(h => `<span>${shortDate(h.date)} ${h.s}点</span>`).join("");
       const rt = d.ratings || {};
       return `<details class="staff-d"><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", d.streak || 0)}
         <div class="nm"><span class="dot" style="background:${esc(d.color)};width:10px;height:10px;margin-right:6px;border:none;box-shadow:none"></span>${esc(d.name)}<small>${esc(d.job)} ・ ${STAGES[d.stage || 0]} ・ ${status}</small></div>
@@ -578,7 +595,7 @@ details.staff-d .staff-row { background: transparent; }
           ${isToday && d.today.reflect && d.today.reflect.note ? `<div><b>ひとこと：</b>${esc(d.today.reflect.note)}</div>` : ""}
           <div><b>点数項目</b></div>${items}
           <div><b>自己評価：</b>素直さ ${rt.sunao || "-"} ・ 興味 ${rt.kyomi || "-"} ・ 表現力 ${rt.hyogen || "-"}</div>
-          ${hist ? `<div class="log">${hist}</div>` : ""}
+          ${hist ? `<div><b>これまでの点数</b></div><div class="log">${hist}</div>` : ""}
           ${(d.goals || []).filter(g => g.month === monthStr()).length ? `<div><b>今月の目標</b></div>${d.goals.filter(g => g.month === monthStr()).map(g => `<div class="kv"><span>${esc(g.text)}</span><span>${g.done ? "達成" : "−"}</span></div>`).join("")}` : ""}
           ${(d.tasks || []).length || openGiven(d).length ? `<div><b>今日のタスク</b></div>${openGiven(d).map(g => `<div class="kv"><span>${esc(g.text)}（渡したタスク）</span><span>${d.givenDone && d.givenDone[g.id] ? "完了" : "−"} <button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}${(d.tasks || []).map(x => `<div class="kv"><span>${esc(x.text)}</span><span>${x.done ? "完了" : "−"}</span></div>`).join("")}` : ""}
           <div class="assign"><input type="text" id="gv-${esc(d.id)}" placeholder="タスクを渡す" maxlength="60" aria-label="${esc(d.name)}さんに渡すタスク"><button class="mini" data-give="${esc(d.id)}">渡す</button></div>
@@ -591,7 +608,27 @@ details.staff-d .staff-row { background: transparent; }
     const memberCard = `<section class="card"><h2>メンバー</h2><p class="sub">スキるを使えるのは、ここに登録したGmailアドレスの人だけです。</p>
       <div class="checks">${members.map(m => `<div class="check"><span></span><span>${esc(m)}</span><button class="mini" data-mdel="${esc(m)}" aria-label="${esc(m)}を外す">外す</button></div>`).join("") || `<p class="sub">まだ誰も登録していません。</p>`}</div>
       <div class="addline"><input type="email" id="new-member" placeholder="例：staff@gmail.com" autocomplete="off"><button class="mini" id="add-member">追加</button></div></section>`;
-    return memberCard + `<section class="card"><h2>みんなの今日</h2>
+    const recs = staffList.map(d => ({ d, r: records(d) }));
+    const dates = [...new Set(recs.flatMap(x => x.r.map(h => h.date)))].sort().reverse();
+    const pastDates = dates.filter(x => x < t);
+    const sel = annDate && dates.includes(annDate) ? annDate : (pastDates[0] || dates[0] || null);
+    let annCard = "";
+    if (sel) {
+      const rows = recs.map(({ d, r }) => ({ d, h: r.find(h => h.date === sel) })).filter(x => x.h).sort((a, b) => b.h.s - a.h.s);
+      let rank = 0, prev = null;
+      const lines = rows.map(({ d, h }, i) => { if (h.s !== prev) { rank = i + 1; prev = h.s; }
+        const its = (h.items || []).map(([n, pt, v]) => `<div class="kv"><span>${esc(n)}（${pt}点）</span><span>${v}回 = ${r1(pt * v)}点</span></div>`).join("") || `<p class="sub">内訳の記録はありません。</p>`;
+        return `<details class="staff-d"><summary><div class="staff-row ranked"><span class="rank">${rank}</span>${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d")}
+          <div class="nm">${esc(d.name)}<small>${esc(d.job)}${h.res ? " ・ 課題" + RES[h.res] : ""}</small></div><span class="pill ${tone(h.s)}">${h.s}</span></div></summary>
+          <div class="staff-detail">${its}</div></details>`; }).join("");
+      const hit = rows.filter(x => x.h.s >= 100).length;
+      const avgA = rows.length ? Math.round(rows.reduce((a, x) => a + x.h.s, 0) / rows.length) : 0;
+      annCard = `<section class="card"><h2>点数発表</h2><p class="sub">朝の発表用です。日付を選ぶと、その日の点数が高い順に並びます。名前をタップすると内訳が見られます。</p>
+        <select id="ann-date" aria-label="発表する日">${dates.map(x => `<option value="${x}"${x === sel ? " selected" : ""}>${fullDate(x)}${x === t ? "・今日（途中）" : ""}</option>`).join("")}</select>
+        <div class="ann-sum"><span>${rows.length}人</span><span>平均 <b>${avgA}</b>点</span><span>100点 <b>${hit}</b>人</span></div>
+        <div class="staff">${lines}</div></section>`;
+    }
+    return memberCard + annCard + `<section class="card"><h2>みんなの今日</h2>
       ${staffList.length ? `<div class="row"><div class="item" style="display:block"><small style="color:var(--muted)">出勤</small><div style="font-family:var(--font-num);font-size:24px">${todays.length} / ${staffList.length}人</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">平均</small><div style="font-family:var(--font-num);font-size:24px">${avg}点</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">100点</small><div style="font-family:var(--font-num);font-size:24px">${hit}人</div></div></div>
@@ -709,6 +746,7 @@ details.staff-d .staff-row { background: transparent; }
   });
 
   document.addEventListener("change", e => {
+    if (e.target.id === "ann-date") { annDate = e.target.value; render(); return; }
     if (!S) return;
     const t = e.target, d = t.dataset;
     if (d.tdone) { const x = S.tasks.find(y => y.id === d.tdone); x.done = t.checked; render(); persist(); if (t.checked) toast("おつかれさま！"); return; }

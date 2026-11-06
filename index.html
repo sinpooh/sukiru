@@ -647,6 +647,7 @@ details.staff-d .staff-row { background: transparent; }
     const b = e.target.closest("button"); if (!b) return;
     const d = b.dataset;
     if (d.tab) { tab = d.tab; render(); window.scrollTo(0, 0); return; }
+    if (d.peek) { const g = dragons.find(x => x.id === d.peek); if (g) toast(`${g.id === uid ? "あなた" : (g.name || "だれか") + "さん"}のドラゴン「${g.dragonName || STAGES[g.stage || 0]}」・${STAGES[g.stage || 0]}`); return; }
     if (b.id === "login") { login(); return; }
     if (b.id === "logout" || b.id === "logout2") { await flush(); await firebase.auth().signOut(); location.reload(); return; }
     if (b.id === "add-member") {

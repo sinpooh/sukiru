@@ -175,6 +175,32 @@ details.staff-d .staff-row { background: transparent; }
 .gcard b { font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
 .gcard small { font-size: 12px; color: var(--muted); }
 .gcard.me { outline: 3px solid var(--accent); }
+.field-card { padding: 0; overflow: hidden; }
+.field { position: relative; aspect-ratio: 400 / 320; }
+.field .land { position: absolute; inset: 0; width: 100%; height: 100%; }
+.roam { position: absolute; transform: translate(-50%, -85%); background: none; border: 0; padding: 0; width: var(--w); display: flex; flex-direction: column; align-items: center; animation: roambob 2.6s ease-in-out infinite; animation-delay: var(--delay); }
+.roam svg { width: 100%; height: auto; filter: drop-shadow(0 2px 0 rgba(0,0,0,.08)); }
+.roam .shadow { position: absolute; bottom: 14px; width: 70%; height: 8px; border-radius: 50%; background: rgba(0,0,0,.15); }
+.roam .tag { font-size: 10px; font-weight: 700; background: rgba(255,255,255,.85); color: #333; border-radius: 99px; padding: 1px 7px; white-space: nowrap; margin-top: -4px; }
+.roam.me .tag { background: var(--accent); color: #fff; }
+@keyframes roambob { 0%,100% { transform: translate(-50%, -85%); } 50% { transform: translate(-50%, -92%); } }
+@media (prefers-reduced-motion: reduce) { .roam { animation: none; } }
+.field-head { padding: 12px 16px 16px; }
+.count { font-size: 13px; color: var(--muted); font-weight: 400; }
+.tally { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
+.tally span { background: var(--bg); border-radius: 99px; padding: 3px 10px; }
+.tally b { color: var(--fg); }
+.book { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.bcard { background: var(--bg); border-radius: 14px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1px; min-width: 0; border: 2px solid transparent; }
+.bcard.me { border-color: var(--accent); }
+.bimg { width: 100%; aspect-ratio: 1; border-radius: 12px; background: radial-gradient(circle at 50% 60%, color-mix(in oklab, var(--c) 18%, #fff), transparent 70%); display: grid; place-items: center; }
+.bimg svg { width: 86%; height: auto; }
+.bcard b { font-size: 13px; overflow-wrap: anywhere; }
+.bcard small { font-size: 11px; color: var(--muted); }
+.steps { display: flex; gap: 3px; margin-top: 3px; }
+.steps i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.steps i.on { background: #f2b630; }
+
 .dragon-name { font-size: 13px; color: var(--muted); }
 .checks { display: flex; flex-direction: column; gap: 6px; }
 .check { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--bg); }
@@ -491,13 +517,45 @@ details.staff-d .staff-row { background: transparent; }
       <section class="card"><h2>人たらし力の自己評価</h2><p class="sub">5段階で今の自分をつけます。一番低い力の課題が出やすくなります。</p>${rates}</section>`;
   }
 
+  // field spots (x%, y%) from back to front
+  const SPOTS = [[14,66],[40,63],[64,66],[88,64],[26,78],[54,77],[78,80],[10,90],[40,92],[66,93],[90,92],[24,66]];
+  const SIZE = [34, 46, 60, 78];
   function viewAll() {
     if (!dragonsLoaded) return `<div class="loading">みんなのドラゴンを読みこみ中…</div>`;
-    const order = [...dragons].sort((a, b) => (b.stage || 0) - (a.stage || 0) || String(a.name).localeCompare(String(b.name), "ja"));
-    const cards = order.map(d => `<div class="gcard ${d.id === uid ? "me" : ""}">${dragonSVG(d.stage || 0, d.color || COLORS[0], "g-d")}
-      <b>${esc(d.dragonName || STAGES[d.stage || 0])}</b><small>${STAGES[d.stage || 0]} ・ ${esc(d.name)}${d.id === uid ? "（あなた）" : ""}</small></div>`).join("");
-    return `<section class="card"><h2>みんなのドラゴン</h2><p class="sub">点数は見えません。ドラゴンの育ち具合だけ、みんなで見られます。</p>
-      ${order.length ? `<div class="gallery">${cards}</div>` : `<p class="sub">まだ誰もドラゴンを持っていません。</p>`}</section>`;
+    const list = [...dragons].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const placed = list.slice(0, SPOTS.length).map((d, i) => ({ d, x: SPOTS[i][0], y: SPOTS[i][1] })).sort((a, b) => a.y - b.y);
+    const field = placed.map(({ d, x, y }, i) => {
+      const st = d.stage || 0, w = SIZE[st];
+      return `<button class="roam ${d.id === uid ? "me" : ""}" data-peek="${esc(d.id)}" style="left:${x}%;top:${y}%;--w:${w}px;--delay:${(i * .37) % 2}s">
+        <span class="shadow"></span>${dragonSVG(st, d.color || COLORS[0], "roam-d")}<span class="tag">${esc(d.dragonName || STAGES[st])}</span></button>`;
+    }).join("");
+    const counts = [0, 0, 0, 0]; list.forEach(d => counts[d.stage || 0]++);
+    const book = list.map(d => {
+      const st = d.stage || 0;
+      const steps = STAGES.map((n, k) => `<i class="${k <= st ? "on" : ""}" title="${n}"></i>`).join("");
+      return `<div class="bcard ${d.id === uid ? "me" : ""}"><div class="bimg" style="--c:${d.color || COLORS[0]}">${dragonSVG(st, d.color || COLORS[0], "g-d")}</div>
+        <b>${esc(d.dragonName || STAGES[st])}</b><small>${esc(d.name)}${d.id === uid ? "（あなた）" : ""}</small>
+        <div class="steps">${steps}</div><small class="stname">${STAGES[st]}</small></div>`;
+    }).join("");
+    return `<section class="card field-card"><div class="field">
+        <svg class="land" viewBox="0 0 400 320" preserveAspectRatio="none" aria-hidden="true">
+          <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd9a8"/><stop offset=".55" stop-color="#ffe9c9"/><stop offset="1" stop-color="#d9f0e0"/></linearGradient>
+          <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fcf7a"/><stop offset="1" stop-color="#5daa5a"/></linearGradient></defs>
+          <rect width="400" height="320" fill="url(#sky)"/>
+          <circle cx="320" cy="58" r="26" fill="#fff3c4"/>
+          <path d="M0 150 L60 92 L110 130 L170 70 L230 128 L290 84 L350 124 L400 100 L400 170 L0 170Z" fill="#b9a7d6" opacity=".55"/>
+          <path d="M150 150 L200 60 L250 150Z" fill="#9a7fc2"/><path d="M190 78 L200 60 L210 78 L204 74 L200 80 L196 74Z" fill="#ff8a4c"/>
+          <path d="M196 56 q-6 -14 4 -22 q-2 10 6 14 q-4 6 -10 8Z" fill="#ffb27a" opacity=".8"/>
+          <path d="M0 165 Q100 140 200 158 T400 150 L400 320 L0 320Z" fill="url(#gr)"/>
+          <ellipse cx="300" cy="235" rx="44" ry="12" fill="#7fc4e6" opacity=".85"/>
+          <g fill="#4e8f4b"><circle cx="30" cy="160" r="16"/><circle cx="48" cy="166" r="12"/><circle cx="372" cy="156" r="14"/><circle cx="356" cy="164" r="10"/></g>
+          <g fill="#fff" opacity=".9"><ellipse cx="80" cy="40" rx="26" ry="9"/><ellipse cx="96" cy="34" rx="16" ry="9"/><ellipse cx="250" cy="28" rx="20" ry="7"/></g>
+          <g fill="#ffd34d"><circle cx="120" cy="250" r="3"/><circle cx="240" cy="290" r="3"/><circle cx="60" cy="270" r="2.5"/><circle cx="350" cy="280" r="2.5"/></g>
+        </svg>${field}</div>
+        <div class="field-head"><h2>ドラゴンの原っぱ</h2><p class="sub">みんなのドラゴンが暮らしています。タップすると誰のドラゴンかわかります。</p></div></section>
+      <section class="card"><h2>ドラゴン図鑑 <small class="count">${list.length}ひき</small></h2>
+        <div class="tally">${STAGES.map((n, k) => `<span>${n} <b>${counts[k]}</b></span>`).join("")}</div>
+        ${list.length ? `<div class="book">${book}</div>` : `<p class="sub">まだ誰もドラゴンを持っていません。</p>`}</section>`;
   }
 
   function viewAdmin() {

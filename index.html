@@ -85,12 +85,24 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .card h2 { margin: 0; font-size: 16px; font-weight: 900; text-wrap: balance; }
 .card .sub { margin: 0; font-size: 13px; color: var(--muted); }
 
-.counter { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
-.ring { width: 112px; height: 112px; position: relative; }
-.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.ring .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ring .num b { font-family: var(--font-num); font-weight: 400; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
-.ring .num small { font-size: 11px; color: var(--muted); }
+.counter { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 2px; }
+.ring { width: 200px; height: 200px; position: relative; border-radius: 50%; }
+.ring::before { content: ""; position: absolute; inset: 14px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, var(--panel), var(--bg)); box-shadow: inset 0 2px 10px rgba(0,0,0,.06); }
+.ring.done::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; box-shadow: 0 0 28px 4px rgba(242, 182, 48, .45); pointer-events: none; }
+.ring svg { position: relative; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .arc { transition: stroke-dasharray .4s ease; filter: drop-shadow(0 0 4px rgba(240, 120, 40, .35)); }
+.ring .ticks line { stroke: var(--line); stroke-width: 2; stroke-linecap: round; }
+.ring .num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.ring .num b { font-family: var(--font-num); font-weight: 400; font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; }
+.ring .num b.bump { animation: bump .35s ease-out; }
+.ring .num small { font-size: 12px; color: var(--muted); font-weight: 700; }
+.ring .num .lbl { letter-spacing: .08em; }
+.remain { display: flex; align-items: baseline; gap: 6px; background: var(--fg); color: var(--bg); border-radius: 99px; padding: 6px 20px; font-weight: 900; }
+.remain span { font-size: 15px; }
+.remain b { font-family: var(--font-num); font-weight: 400; font-size: 32px; line-height: 1; color: #ffb347; }
+.remain.done { background: linear-gradient(90deg, #f2b630, #e0782a); color: #fff; }
+.remain.done b { color: #fff; }
+.counter .verdict { text-align: center; }
 .verdict { font-weight: 700; font-size: 14px; }
 .verdict.good { color: var(--good); } .verdict.warn { color: var(--warn); } .verdict.bad { color: var(--bad); }
 
@@ -489,11 +501,19 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   }
 
   function ring(score) {
-    const r = 48, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, score / 100));
-    const col = score >= 100 ? "var(--good)" : score > 80 ? "var(--warn)" : "var(--bad)";
-    return `<div class="ring"><svg viewBox="0 0 112 112"><circle cx="56" cy="56" r="${r}" fill="none" stroke="var(--line)" stroke-width="10"/>
-      <circle cx="56" cy="56" r="${r}" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${c * p} ${c}"/></svg>
-      <div class="num"><b>${score}</b><small>/ 100点</small></div></div>`;
+    const r = 74, c = 2 * Math.PI * r, p = Math.max(0, Math.min(1, score / 100));
+    const done = score >= 100, mid = score > 80;
+    const g = done ? ["#ffd34d", "#f2b630", "#3fa36b"] : mid ? ["#ffcf6b", "#f29a30", "#e0782a"] : ["#ff9a76", "#f0683f", "#d84a3a"];
+    const ticks = Array.from({ length: 20 }, (_, i) => { const a = i / 20 * 2 * Math.PI; const x1 = 90 + Math.cos(a) * 88, y1 = 90 + Math.sin(a) * 88, x2 = 90 + Math.cos(a) * 84, y2 = 90 + Math.sin(a) * 84; return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`; }).join("");
+    return `<div class="ring ${done ? "done" : ""}"><svg viewBox="0 0 180 180"><defs><linearGradient id="ringg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${g[0]}"/><stop offset=".5" stop-color="${g[1]}"/><stop offset="1" stop-color="${g[2]}"/></linearGradient></defs>
+      <g class="ticks">${ticks}</g><circle cx="90" cy="90" r="${r}" fill="none" stroke="var(--line)" stroke-width="16"/>
+      <circle class="arc" cx="90" cy="90" r="${r}" fill="none" stroke="url(#ringg)" stroke-width="16" stroke-linecap="round" stroke-dasharray="${(c * p).toFixed(1)} ${c.toFixed(1)}"/></svg>
+      <div class="num"><small class="lbl">今日の点数</small><b id="ring-num">${score}</b><small>/ 100点</small></div></div>`;
+  }
+  function counterHTML(sc) {
+    const remain = sc >= 100 ? `<div class="remain done"><span>100点達成！</span>${sc > 100 ? `<b>+${r1(sc - 100)}</b><span>点</span>` : ""}</div>`
+      : `<div class="remain"><span>のこり</span><b>${r1(100 - sc)}</b><span>点</span></div>`;
+    return `${ring(sc)}${remain}${verdict(sc)}`;
   }
 
   const goalMsg = sc => sc >= 100 ? (sc > 100 ? `100点達成！ さらに+${r1(sc - 100)}点` : "100点達成！ おめでとう！") : `あと<b>${r1(100 - sc)}</b>点で達成！`;
@@ -511,7 +531,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const bar = $("#hero-bar"); if (bar) bar.style.width = Math.min(100, Math.max(0, sc)) + "%";
     const m = $("#hero-msg"); if (m) m.innerHTML = goalMsg(sc);
     const h = $("#hero"); if (h) h.classList.toggle("done", sc >= 100);
-    const c = $("#counter"); if (c) c.innerHTML = ring(sc) + `<div>${verdict(sc)}</div>`;
+    const c = $("#counter"); if (c) { c.innerHTML = counterHTML(sc); if (bump) { const rn = $("#ring-num"); rn && rn.classList.add("bump"); } }
     liveBar();
     if (sc >= 100 && !S.today.celebrated) celebrate(sc);
   }
@@ -538,9 +558,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   }
   function closeCelebrate() { const el = $("#celebrate"); if (el) { el.hidden = true; el.innerHTML = ""; } }
   function verdict(score) {
-    if (score >= 100) return `<div class="verdict good">100点達成${score > 100 ? `（+${r1(score - 100)}点）` : ""}！このままなら連続${S.streak + 1}日目</div>`;
-    if (score > 80) return `<div class="verdict warn">あと${r1(100 - score)}点で100点。今のままなら現状維持</div>`;
-    return `<div class="verdict bad">80点以下だとドラゴンが退化します。あと${r1(100 - score)}点</div>`;
+    if (score >= 100) return `<div class="verdict good">このままなら100点連続${S.streak + 1}日目！</div>`;
+    if (score > 80) return `<div class="verdict warn">今のままならドラゴンは現状維持。100点で連続記録！</div>`;
+    return `<div class="verdict bad">80点以下だとドラゴンが退化します</div>`;
   }
 
   function header() {
@@ -629,10 +649,10 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       : `<p class="sub">出勤したらボタンを押してください。ドラゴンが今日の課題を1つ出します。</p><button class="primary" id="checkin">出勤する</button>`;
     const last = S.lastResult ? `<p class="result-msg">前回（${shortDate(S.lastResult.date)}）：${esc(S.lastResult.msg)}</p>` : "";
     const hist = historyBlock(S.history || [], "me");
-    return `${nest()}${scoreHero(sc)}${last}
+    return `${nest()}${last}
       <section class="card"><h2>人たらし力の課題</h2>${task}</section>
       ${tasksCard()}
-      <section class="card"><h2>点数カウンター</h2><div class="counter" id="counter">${ring(sc)}<div>${verdict(sc)}</div></div>
+      <section class="card"><h2>点数カウンター</h2><div class="counter" id="counter">${counterHTML(sc)}</div>
         <p class="sub">やった回数は、数字の欄をタップして直接入力するか（0.5のような数字も入れられます）、＋−で変えます。日付が変わると、その日の点数でドラゴンが育ちます。</p>
         <div class="items">${items}</div></section>
       ${goalsCard()}

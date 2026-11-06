@@ -249,6 +249,12 @@ details.staff-d .staff-row { background: transparent; }
     "配送": { sunao: ["ミスやヒヤリを早めに報告する", "先輩のルートの工夫を1つ聞いてまねする"], kyomi: ["受け取る人の都合を考えて一言そえる", "お届け先で気づいたことを1つメモする"], hyogen: ["笑顔で一言そえて手渡す", "戻ったら今日のお届けを一言で報告する"] },
     "出張買取": { sunao: ["先輩の進め方を1つまねる", "査定で迷ったことを先輩に1つ聞く"], kyomi: ["品物にまつわる思い出を1つ聞く", "お客様が大事にしている点を1つ聞き取る"], hyogen: ["査定の理由をわかりやすく伝える", "最後に「お任せいただきありがとうございます」と伝える"] }
   };
+  // easy tasks anyone can do with anyone (customers, coworkers, family), used together with the job tasks
+  const COMMON_TASKS = {
+    sunao: ["「ありがとう」を5回言う", "教えてもらったら「なるほど」と返す", "言われたことを1つすぐやってみる", "まちがえたら、すぐ「すみません」と言う", "わからないことを1つ人に聞く", "人のいいところを1つまねしてみる", "注意されたら「ありがとうございます」と返す", "「やってみます」を1回言う"],
+    kyomi: ["誰かの名前を呼んであいさつする", "誰かに「最近どう？」と聞いてみる", "人の話を最後までうなずいて聞く", "相手の好きなものを1つ聞いてみる", "誰かのちょっとした変化に気づいて声をかける", "質問を1つしてから自分の話をする", "相手が困っていないか1回まわりを見る", "今日話した人の話を1つおぼえて帰る"],
+    hyogen: ["いつもより明るい声であいさつする", "笑顔で1回「おつかれさまです」と言う", "「うれしい」「たのしい」を声に出して伝える", "誰かを1回ほめる", "「助かりました」を1回伝える", "目を見て話すのを3回やる", "身ぶり手ぶりをつけて話してみる", "帰るときに「また明日」と笑顔で言う"]
+  };
   const RES = { done: "できた", some: "少しできた", not: "できなかった" };
 
   const $ = (sel, el = document) => el.querySelector(sel);
@@ -668,7 +674,7 @@ details.staff-d .staff-row { background: transparent; }
   function pickTask() {
     const weakest = Object.keys(ELS).sort((a, b) => S.ratings[a] - S.ratings[b])[0];
     const el = Math.random() < 0.6 ? weakest : Object.keys(ELS)[Math.floor(Math.random() * 3)];
-    const pool = (TASKS[S.job] || TASKS["接客"])[el];
+    const pool = [...COMMON_TASKS[el], ...((TASKS[S.job] || {})[el] || [])];
     const list = pool.filter(t => t !== S.lastTask);
     return { el, text: list[Math.floor(Math.random() * list.length)] };
   }

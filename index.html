@@ -321,6 +321,26 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 .counter { isolation: isolate; }
 .counter-card .stepper button, .counter-card .stepper input { background: linear-gradient(180deg, #4a3624, #2a1d12); border: 1px solid #b58a4a; color: #f3d67e; }
 .counter-card .stepper input { font-family: Cinzel, serif; font-weight: 700; }
+/* dragon nest in the same dark leather & brass style as the counter */
+.nest { border-radius: 22px; color: #e9d3a0; padding: 22px 16px 18px; background:
+  radial-gradient(150% 120% at 50% 40%, transparent 45%, rgba(0, 0, 0, .6)),
+  repeating-linear-gradient(97deg, rgba(255,255,255,.015) 0 2px, rgba(0,0,0,.03) 2px 5px),
+  linear-gradient(165deg, #3a2a1c, #241910 55%, #160f09);
+  border: 3px solid #8a6230; box-shadow: inset 0 0 0 2px #1a120a, inset 0 0 0 4px #b58a4a, inset 0 0 0 6px #1a120a, inset 0 0 40px rgba(0,0,0,.6), 0 10px 26px rgba(20,10,0,.45); }
+.nest::before, .nest::after { content: "◆"; position: absolute; top: 12px; color: #c89a4a; font-size: 12px; text-shadow: 0 1px 0 #000; }
+.nest::before { left: 16px; } .nest::after { right: 16px; }
+.nest-light { position: absolute; left: 50%; top: 8px; width: 260px; height: 230px; transform: translateX(-50%); background: radial-gradient(ellipse at 50% 55%, color-mix(in oklab, var(--dc) 35%, rgba(255, 210, 120, .45)), transparent 65%); pointer-events: none; }
+.nest-dragon { position: relative; z-index: 1; }
+.nest svg.dragon { filter: drop-shadow(0 6px 8px rgba(0,0,0,.55)); }
+.pedestal { position: relative; z-index: 0; width: 190px; height: 26px; margin-top: -22px; border-radius: 50%; background: radial-gradient(ellipse at 50% 30%, #5a4632, #2a1d12 70%); box-shadow: 0 4px 0 #120c06, inset 0 2px 0 rgba(232,199,122,.35), 0 0 0 2px #8a6230; }
+.nest .stage-name { position: relative; margin-top: 10px; font-family: "Shippori Mincho", serif; font-weight: 800; font-size: 22px; letter-spacing: .12em; padding: 4px 26px;
+  background: linear-gradient(180deg, #fff1c2, #e0b45c 55%, #a8752e); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 rgba(0,0,0,.6)); }
+.nest .dragon-name { font-family: "Shippori Mincho", serif; color: #c9b083; letter-spacing: .2em; font-size: 13px; }
+.nest .stages { gap: 8px; margin: 4px 0 2px; }
+.nest .stages i { width: 14px; height: 14px; border-radius: 2px; transform: rotate(45deg); background: #2a1d12; border: 1px solid #8a6230; box-shadow: inset 0 0 4px rgba(0,0,0,.8); }
+.nest .stages i.on { background: radial-gradient(circle at 35% 30%, #fff3c4, #e0b45c 45%, #8a5a12); border-color: #f3d67e; box-shadow: 0 0 8px rgba(255, 200, 90, .6); }
+.nest .streak { font-family: "Shippori Mincho", serif; color: #c9b083; letter-spacing: .04em; }
+.nest .streak b { font-family: Cinzel, serif; font-weight: 900; color: #f3d67e; font-size: 20px; text-shadow: 0 0 8px rgba(255, 200, 90, .4); }
 .given-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .given-row .st { font-size: 12px; color: var(--muted); }
 .given-row .st.ok { color: var(--good, #2f8f5b); font-weight: 700; }
@@ -654,7 +674,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   function nest() {
     const bars = STAGES.map((_, i) => `<i class="${i <= S.stage ? "on" : ""}"></i>`).join("");
     const next = S.stage < 3 ? `次の進化まで 100点を あと<b>${GROW_DAYS - S.streak}</b>日` : `最終形態！ 100点連続 <b>${S.streak}</b>日`;
-    return `<section class="nest" style="--dc:${S.color}"><div class="${growFx ? "grow-fx" : ""}">${dragonSVG(S.stage, S.color, "dragon", S.streak)}</div>
+    return `<section class="nest" style="--dc:${S.color}"><div class="nest-light"></div><div class="nest-dragon ${growFx ? "grow-fx" : ""}">${dragonSVG(S.stage, S.color, "dragon", S.streak)}</div><div class="pedestal"></div>
       <div class="stage-name">${S.dragonName ? esc(S.dragonName) : STAGES[S.stage]}</div>${S.dragonName ? `<div class="dragon-name">${STAGES[S.stage]}</div>` : ""}<div class="stages">${bars}</div><div class="streak">${next}</div></section>`;
   }
 

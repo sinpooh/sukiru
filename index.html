@@ -521,8 +521,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const { assigned, givenTasks, ...mine } = S;
     const ref = db.doc("staff/" + uid);
     try {
-      if (created) await ref.update({ ...mine, updatedAt: new Date().toISOString() });
-      else { await ref.set({ ...mine, updatedAt: new Date().toISOString() }); created = true; }
+      const ts = new Date().toISOString(); S.updatedAt = ts;
+      if (created) await ref.update({ ...mine, updatedAt: ts });
+      else { await ref.set({ ...mine, updatedAt: ts }); created = true; }
       const pub = { name: S.name, job: S.job, color: S.color, dragonName: S.dragonName || "", stage: S.stage };
       const pubJson = JSON.stringify(pub);
       if (pubJson !== lastPublic) { await db.doc("dragons/" + uid).set(pub); lastPublic = pubJson; }
@@ -1044,8 +1045,16 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     else if (e.target.id && e.target.id.startsWith("gv-")) { e.preventDefault(); $(`[data-give="${e.target.id.slice(3)}"]`).click(); }
   });
   document.addEventListener("focusin", e => { if (e.target.dataset && e.target.dataset.val) e.target.select(); });
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && S && rollover()) { render(); persist(); if (S.lastResult) toast(S.lastResult.msg); }
+  // coming back to the app: first pull the latest save (another phone/PC may have changed it), then close yesterday
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || !S) return;
+    if (db && uid && !dirty && !writing) {
+      try {
+        const snap = await db.doc("staff/" + uid).get({ source: "server" });
+        if (snap.exists && !dirty && !writing) { const d = snap.data(); if ((d.updatedAt || "") > (S.updatedAt || "")) { S = structuredClone(d); render(); } }
+      } catch (e) {}
+    }
+    if (rollover()) { render(); persist(); if (S.lastResult) toast(S.lastResult.msg); }
   });
 
   // ---- boot ----
@@ -1092,7 +1101,18 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
           render();
           return;
         }
-        // later snapshots: only take the owner's assignment, keep local edits
+        // a newer save from another phone/PC: take it, unless this screen has unsaved edits
+        if (snap.exists && S && !snap.metadata.hasPendingWrites && !dirty && !writing) {
+          const d = snap.data();
+          if ((d.updatedAt || "") > (S.updatedAt || "")) {
+            S = structuredClone(d);
+            if (rollover()) persist();
+            const f = document.activeElement && document.activeElement.id;
+            if (tab !== "admin" && !(f && (f === "new-task" || f === "new-goal" || f === "note" || f.startsWith("val-") || f.startsWith("name-") || f.startsWith("pt-")))) render();
+            return;
+          }
+        }
+        // later snapshots: take the owner's assignment, keep local edits
         if (snap.exists && S) {
           const a = snap.data().assigned, gt = snap.data().givenTasks;
           if (JSON.stringify(a) !== JSON.stringify(S.assigned) || JSON.stringify(gt) !== JSON.stringify(S.givenTasks)) {

@@ -542,6 +542,14 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   }
 
   // Dragon drawing: one svg per stage, colored by --dc
+  function eggColor(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return "#6ccde0";
+    const n = parseInt(m[1], 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h = (h * 60 + 180 + 360) % 360;
+    return `hsl(${Math.round(h)} 62% 66%)`;
+  }
   function dragonSVG(stage, color, cls = "dragon", streak = 0) {
     const dark = `color-mix(in oklab, ${color} 62%, #000)`;
     const light = `color-mix(in oklab, ${color} 35%, #fff)`;
@@ -553,13 +561,28 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         <ellipse cx="80" cy="88" rx="10" ry="18" fill="#fff" opacity=".35" transform="rotate(-20 80 88)"/>
         ${streak >= 2 ? `<path d="M70 118 l12 -8 l8 10 l10 -12 l9 9 l12 -7" fill="none" stroke="${dark}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` : ""}`;
     } else if (stage === 1) {
-      g = `<path d="M60 128 q40 -30 80 0 l0 30 q-40 26 -80 0z" fill="${color}"/>
-        <circle cx="100" cy="112" r="38" fill="${color}"/>
-        <path d="M78 80 l-6 -18 l16 12z M122 80 l6 -18 l-16 12z" fill="${dark}"/>
-        <ellipse cx="100" cy="128" rx="20" ry="14" fill="${light}"/>
-        ${eye(86, 106)}${eye(114, 106)}
-        <path d="M95 124 q5 5 10 0" fill="none" stroke="#1b1b1b" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M48 150 l10 -16 l12 12 l14 -14 l16 16 l16 -16 l14 14 l12 -12 l10 16 l0 32 q-52 14 -104 0z" fill="#f6f2e8" stroke="#d8d0bf" stroke-width="2"/>`;
+      const O = `stroke="#5a2d12" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"`, cream = "#fbf1dc", egg = eggColor(color);
+      const shell = "M66 124 L76 117 L84 126 L97 116 L110 126 L122 116 L134 124 A44 44 0 1 1 66 124 Z";
+      const uid = "e" + Math.random().toString(36).slice(2, 8);
+      g = `<path d="M124 100 L150 80 Q162 72 168 84 L174 118 Q164 110 158 118 Q152 108 142 114 Q136 104 126 112 Z" fill="${cream}" ${O}/>
+        <path d="M150 80 L160 112 M134 92 L146 112" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+        <path d="M124 100 L150 80 Q162 72 168 84" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="127" cy="44" r="9" fill="#f6cf45" ${O}/><circle cx="134" cy="60" r="9" fill="#f6cf45" ${O}/><circle cx="135" cy="77" r="9" fill="#f6cf45" ${O}/><circle cx="131" cy="93" r="8" fill="#f6cf45" ${O}/>
+        <path d="M90 88 Q86 108 90 126 L128 126 Q132 102 120 82 Z" fill="${color}" ${O}/>
+        <path d="M94 98 Q100 104 108 100 M93 108 Q100 114 109 110" fill="none" stroke="#f0c9a0" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="92" cy="24" rx="9" ry="18" transform="rotate(-18 92 24)" fill="${cream}" ${O}/><ellipse cx="124" cy="28" rx="9" ry="18" transform="rotate(22 124 28)" fill="${cream}" ${O}/>
+        <ellipse cx="90" cy="16" rx="3" ry="6" transform="rotate(-18 90 16)" fill="#fff"/><ellipse cx="126" cy="20" rx="3" ry="6" transform="rotate(22 126 20)" fill="#fff"/>
+        <path d="M62 56 Q66 32 98 32 Q132 32 132 60 Q132 90 104 94 Q82 96 68 92 Q48 88 48 74 Q48 60 62 56 Z" fill="${color}" ${O}/>
+        <circle cx="104" cy="62" r="6.5" fill="#3a1d0c"/><circle cx="106" cy="59.5" r="2.3" fill="#fff"/>
+        <circle cx="111" cy="77" r="8" fill="#f4a46a" opacity=".85"/>
+        <circle cx="57" cy="66" r="1.8" fill="#5a2d12"/><circle cx="65" cy="70" r="1.8" fill="#5a2d12"/>
+        <path d="M60 80 Q76 92 94 82" fill="none" stroke="#5a2d12" stroke-width="3" stroke-linecap="round"/>
+        <clipPath id="${uid}"><path d="${shell}"/></clipPath>
+        <path d="${shell}" fill="${egg}"/>
+        <g clip-path="url(#${uid})" fill="${cream}"><circle cx="76" cy="148" r="9"/><circle cx="112" cy="140" r="8"/><circle cx="138" cy="160" r="8"/><circle cx="98" cy="170" r="10"/><circle cx="64" cy="178" r="7"/><circle cx="126" cy="186" r="8"/><circle cx="84" cy="196" r="6"/></g>
+        <path d="${shell}" fill="none" ${O}/>
+        <path d="M76 126 Q74 114 84 114 Q94 114 92 126" fill="${color}" ${O}/><path d="M104 126 Q102 114 112 114 Q122 114 120 126" fill="${color}" ${O}/>
+        <path d="M81 121 v5 M87 121 v5 M109 121 v5 M115 121 v5" stroke="#5a2d12" stroke-width="2" stroke-linecap="round"/>`;
     } else if (stage === 2) {
       g = `<path d="M128 150 q40 4 42 -26 q-2 18 -24 18" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round"/>
         <path d="M70 108 q-34 -26 -30 -52 q18 22 40 30z M130 108 q34 -26 30 -52 q-18 22 -40 30z" fill="${dark}"/>

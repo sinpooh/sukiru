@@ -554,7 +554,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (writing) { saveTimer = setTimeout(flush, 500); return; }
     writing = true; dirty = false;
     const ref = db.doc("staff/" + uid);
-    const sent = own(structuredClone(S));
+    const sent = JSON.parse(JSON.stringify(own(S)));   // drops empty (undefined) values, which the database refuses
     try {
       let result = null;
       await db.runTransaction(async tx => {
@@ -582,7 +582,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       if (pubJson !== lastPublic) { await db.doc("dragons/" + uid).set(pub); lastPublic = pubJson; }
     } catch (e) {
       if (e && e.code === "permission-denied") { banner = "保存できませんでした。シンプーさんに、メンバー登録してもらってください。"; render(); }
-      else { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 2500 + Math.random() * 1500); if (!(e && e.code === "unavailable")) { banner = "まだ保存できていません。通信がもどると自動で保存します。"; render(); } }
+      else { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 2500 + Math.random() * 1500); if (!(e && e.code === "unavailable")) { banner = "まだ保存できていません（" + ((e && (e.code || e.message)) || "不明") + "）。自動でもう一度保存します。"; render(); } }
     }
     writing = false;
     if (!dirty && banner.startsWith("まだ保存できていません")) { banner = ""; render(); }

@@ -848,6 +848,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <div class="edit-row" style="font-size:12px;color:var(--muted)"><span>順番</span><span>項目</span><span>1回の点数</span><span></span></div>${rows}
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
+        ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${JOBS.map(j => `<option ${j === S.job ? "selected" : ""}>${j}</option>`).join("")}</select></label>

@@ -612,8 +612,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const n = parseInt(m[1], 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
     let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    h = (h * 60 + 180 + 360) % 360;
-    return `hsl(${Math.round(h)} 62% 66%)`;
+    h = (h * 60 + 360) % 360;
+    const sat = d ? d / (1 - Math.abs(mx + mn - 1)) : 0;
+    return `hsl(${Math.round(h)} ${Math.round(Math.min(sat, .7) * 100)}% 74%)`;   // same color as the dragon, lighter
   }
   function dragonSVG(stage, color, cls = "dragon", streak = 0) {
     const dark = `color-mix(in oklab, ${color} 62%, #000)`;
@@ -861,7 +862,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/7-8</p>
+        <p class="sub">バージョン：11/7-9</p>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>

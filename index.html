@@ -644,8 +644,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         <circle cx="57" cy="66" r="1.8" fill="#5a2d12"/><circle cx="65" cy="70" r="1.8" fill="#5a2d12"/>
         <path d="M60 80 Q76 92 94 82" fill="none" stroke="#5a2d12" stroke-width="3" stroke-linecap="round"/>
         <clipPath id="${uid}"><path d="${shell}"/></clipPath>
-        <path d="${shell}" fill="${egg}"/>
-        <g clip-path="url(#${uid})" fill="${cream}"><circle cx="76" cy="148" r="9"/><circle cx="112" cy="140" r="8"/><circle cx="138" cy="160" r="8"/><circle cx="98" cy="170" r="10"/><circle cx="64" cy="178" r="7"/><circle cx="126" cy="186" r="8"/><circle cx="84" cy="196" r="6"/></g>
+        <path d="${shell}" fill="${color}"/>
+        <g clip-path="url(#${uid})" fill="${dark}" opacity=".55"><circle cx="76" cy="148" r="9"/><circle cx="112" cy="140" r="8"/><circle cx="138" cy="160" r="8"/><circle cx="98" cy="170" r="10"/><circle cx="64" cy="178" r="7"/><circle cx="126" cy="186" r="8"/><circle cx="84" cy="196" r="6"/></g>
         <path d="${shell}" fill="none" ${O}/>
         <path d="M76 126 Q74 114 84 114 Q94 114 92 126" fill="${color}" ${O}/><path d="M104 126 Q102 114 112 114 Q122 114 120 126" fill="${color}" ${O}/>
         <path d="M81 121 v5 M87 121 v5 M109 121 v5 M115 121 v5" stroke="#5a2d12" stroke-width="2" stroke-linecap="round"/>`;
@@ -862,7 +862,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/7-9</p>
+        <p class="sub">バージョン：11/7-10</p>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>

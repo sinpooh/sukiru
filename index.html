@@ -754,10 +754,10 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const hist = historyBlock(S.history || [], "me");
     return `${nest()}${last}
       <section class="card"><h2>人たらし力の課題</h2>${task}</section>
-      ${tasksCard()}
       <section class="card counter-card"><h2><span class="orn">❖</span>点数カウンター<span class="orn">❖</span></h2><div class="counter" id="counter">${counterHTML(sc)}</div>
         <p class="sub">やった回数は、数字の欄をタップして直接入力するか（0.5のような数字も入れられます）、＋−で変えます。日付が変わると、その日の点数でドラゴンが育ちます。</p>
         <div class="items">${items}</div></section>
+      ${tasksCard()}
       ${goalsCard()}
       ${hist ? `<section class="card"><h2>${histOpen.has("me") ? "これまでの点数" : "最近の点数"}</h2>${hist}</section>` : ""}`;
   }

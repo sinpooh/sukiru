@@ -511,6 +511,41 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 
   // ---- storage: shared db when available, otherwise this device ----
   let saveTimer = null, writing = false, dirty = false, created = false;
+  let base = null;         // the last version this screen knows is on the server (to merge with saves from other phones/PCs)
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const own = d => { const { assigned, givenTasks, ...m } = d || {}; return m; };
+  // three-way merge: what this screen changed (vs base) wins, everything else comes from the server
+  function mergeObj(b, l, sv, skip = []) {
+    const out = {};
+    for (const k of new Set([...Object.keys(l || {}), ...Object.keys(sv || {})])) {
+      if (skip.includes(k)) continue;
+      const v = same(l[k], b[k]) ? sv[k] : l[k];
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  function mergeItems(b = [], l = [], sv = []) {
+    const bm = new Map(b.map(x => [x.id, x])), lm = new Map(l.map(x => [x.id, x])), sm = new Map(sv.map(x => [x.id, x]));
+    const out = [];
+    for (const it of l) {
+      const s2 = sm.get(it.id), b2 = bm.get(it.id);
+      if (!s2) { if (!b2 || !same(it, b2)) out.push(it); continue; }      // new here, or deleted elsewhere but changed here
+      out.push(b2 ? mergeObj(b2, it, s2) : it);
+    }
+    for (const it of sv) if (!lm.has(it.id)) { const b2 = bm.get(it.id); if (!b2 || !same(b2, it)) out.push(it); } // added elsewhere
+    if (same(l.map(x => x.id), b.map(x => x.id))) {                       // order not changed here: keep the other screen's order
+      const pos = new Map(sv.map((x, i) => [x.id, i]));
+      out.sort((x, y) => (pos.has(x.id) ? pos.get(x.id) : 1e9) - (pos.has(y.id) ? pos.get(y.id) : 1e9));
+    }
+    return out;
+  }
+  function mergeDoc(b, l, sv) {
+    b = b || {};
+    const out = mergeObj(b, l, sv, ["items", "rev", "updatedAt"]);
+    out.items = mergeItems(b.items, l.items, sv.items);
+    return out;
+  }
+  function adopt(d) { S = structuredClone(d); base = own(structuredClone(d)); }
   const LOCAL_KEY = "skiru-app-v1";
   function persist() { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700); }
   async function flush() {
@@ -518,23 +553,41 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (!db) { try { localStorage.setItem(LOCAL_KEY, JSON.stringify(S)); } catch (e) {} dirty = false; return; }
     if (writing) { saveTimer = setTimeout(flush, 500); return; }
     writing = true; dirty = false;
-    const { assigned, givenTasks, ...mine } = S;
     const ref = db.doc("staff/" + uid);
+    const sent = own(structuredClone(S));
     try {
-      const ts = new Date().toISOString(); S.updatedAt = ts;
-      if (created) await ref.update({ ...mine, updatedAt: ts });
-      else { await ref.set({ ...mine, updatedAt: ts }); created = true; }
+      let result = null;
+      await db.runTransaction(async tx => {
+        const snap = await tx.get(ref);
+        const ts = new Date().toISOString();
+        if (snap.exists) {
+          const sv = own(snap.data());
+          const out = (sv.rev || 0) === ((base && base.rev) || 0) && (sv.updatedAt || "") === ((base && base.updatedAt) || "") ? { ...sent } : mergeDoc(base, sent, sv);
+          out.rev = (sv.rev || 0) + 1; out.updatedAt = ts;
+          tx.update(ref, out); result = out;
+        } else {
+          const out = { ...sent, rev: 1, updatedAt: ts };
+          tx.set(ref, out); result = out;
+        }
+      });
+      created = true;
+      const merged = !same({ ...sent, rev: 0, updatedAt: 0 }, { ...result, rev: 0, updatedAt: 0 });
+      const keep = { assigned: S.assigned, givenTasks: S.givenTasks };
+      if (dirty) { const now = own(S); S = { ...mergeDoc(sent, now, result), rev: result.rev, updatedAt: result.updatedAt, ...keep }; }
+      else { S = { ...structuredClone(result), ...keep }; }
+      base = structuredClone(result);
+      if (merged && !dirty) { const f = document.activeElement && document.activeElement.id; if (!(f && (f.startsWith("val-") || f.startsWith("name-") || f.startsWith("pt-") || f === "new-task" || f === "new-goal" || f === "note"))) render(); }
       const pub = { name: S.name, job: S.job, color: S.color, dragonName: S.dragonName || "", stage: S.stage };
       const pubJson = JSON.stringify(pub);
       if (pubJson !== lastPublic) { await db.doc("dragons/" + uid).set(pub); lastPublic = pubJson; }
     } catch (e) {
       if (e && e.code === "permission-denied") { banner = "保存できませんでした。シンプーさんに、メンバー登録してもらってください。"; render(); }
-      else if (e && e.code === "unavailable") { dirty = true; setTimeout(flush, 1500 + Math.random() * 1000); }
-      else { banner = "保存できませんでした。通信を確認してください。"; render(); }
+      else { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 2500 + Math.random() * 1500); if (!(e && e.code === "unavailable")) { banner = "まだ保存できていません。通信がもどると自動で保存します。"; render(); } }
     }
     writing = false;
+    if (!dirty && banner.startsWith("まだ保存できていません")) { banner = ""; render(); }
   }
-  window.addEventListener("pagehide", () => { if (!db) flush(); });
+  window.addEventListener("pagehide", () => { clearTimeout(saveTimer); flush(); });
 
   function toast(msg) {
     const t = $("#toast"); t.textContent = msg; t.hidden = false;
@@ -1036,7 +1089,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       return;
     }
     if (d.del) { S.items = S.items.filter(x => x.id != d.del); render(); persist(); return; }
-    if (b.id === "additem") { const id = Math.max(0, ...S.items.map(x => x.id)) + 1; S.items.push({ id, name: "新しい項目", pt: 5, val: 0 }); render(); persist(); $("#name-" + id).focus(); return; }
+    if (b.id === "additem") { const id = Math.max(Date.now(), ...S.items.map(x => x.id + 1)); S.items.push({ id, name: "新しい項目", pt: 5, val: 0 }); render(); persist(); $("#name-" + id).focus(); return; }
     if (d.color) { S.color = d.color; render(); persist(); toast("ドラゴンの色を変えました"); return; }
     if (d.res) { S.today.reflect.result = d.res; render(); persist(); return; }
   });
@@ -1070,11 +1123,16 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   document.addEventListener("focusin", e => { if (e.target.dataset && e.target.dataset.val) e.target.select(); });
   // coming back to the app: first pull the latest save (another phone/PC may have changed it), then close yesterday
   document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "hidden") {
+      const a = document.activeElement; if (a && a.tagName === "INPUT") a.blur();   // finishes a half-typed name
+      if (dirty) { clearTimeout(saveTimer); flush(); }
+      return;
+    }
     if (document.visibilityState !== "visible" || !S) return;
     if (db && uid && !dirty && !writing) {
       try {
         const snap = await db.doc("staff/" + uid).get({ source: "server" });
-        if (snap.exists && !dirty && !writing) { const d = snap.data(); if ((d.updatedAt || "") > (S.updatedAt || "")) { S = structuredClone(d); render(); } }
+        if (snap.exists && !dirty && !writing) { const d = snap.data(); if ((d.rev || 0) !== ((base && base.rev) || 0) || (d.updatedAt || "") !== ((base && base.updatedAt) || "")) { adopt(d); render(); } }
       } catch (e) {}
     }
     if (rollover()) { render(); persist(); if (S.lastResult) toast(S.lastResult.msg); }
@@ -1118,7 +1176,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         if (first) {
           if (!snap.exists && snap.metadata.fromCache) return;
           first = false; booted = true;
-          if (snap.exists) { S = structuredClone(snap.data()); created = true; }
+          if (snap.exists) { adopt(snap.data()); created = true; }
           if (isOwner && !S) tab = "admin";
           if (S && rollover()) { persist(); if (S.lastResult) setTimeout(() => toast(S.lastResult.msg), 300); }
           render();
@@ -1127,8 +1185,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         // a newer save from another phone/PC: take it, unless this screen has unsaved edits
         if (snap.exists && S && !snap.metadata.hasPendingWrites && !dirty && !writing) {
           const d = snap.data();
-          if ((d.updatedAt || "") > (S.updatedAt || "")) {
-            S = structuredClone(d);
+          if ((d.rev || 0) !== ((base && base.rev) || 0) || (d.updatedAt || "") !== ((base && base.updatedAt) || "")) {
+            adopt(d);
             if (rollover()) persist();
             const f = document.activeElement && document.activeElement.id;
             if (tab !== "admin" && !(f && (f === "new-task" || f === "new-goal" || f === "note" || f.startsWith("val-") || f.startsWith("name-") || f.startsWith("pt-")))) render();

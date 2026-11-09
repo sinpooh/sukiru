@@ -862,7 +862,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/7-10</p>
+        <p class="sub">バージョン：11/9-1</p>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>
@@ -982,13 +982,13 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <input type="text" id="give-text" placeholder="例：棚の商品を10点撮影" maxlength="60" aria-label="渡すタスク">
       <div class="addline"><label class="ptlabel">できたら <input type="number" id="give-pt" inputmode="numeric" min="0" max="100" value="10" aria-label="できたらもらえる点数"> 点</label><button class="mini" id="give-go">渡す</button></div>
       ${openAll.length ? `<div><b>渡したタスク</b></div>${openAll.map(({ d, g }) => `<div class="given-row"><span><b>${esc(d.name)}</b>　${esc(g.text)}${Number(g.pt) > 0 ? `（${g.pt}点）` : ""}</span><span class="st ${d.givenDone && d.givenDone[g.id] ? "ok" : ""}">${d.givenDone && d.givenDone[g.id] ? "完了" : "まだ"}</span><button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}` : ""}</section>` : "";
-    return memberCard + giveCard + annCard + `<section class="card"><h2>みんなの今日</h2>
+    return `<section class="card"><h2>みんなの今日</h2>
       ${staffList.length ? `<div class="row"><div class="item" style="display:block"><small style="color:var(--muted)">出勤</small><div style="font-family:var(--font-num);font-size:24px">${todays.length} / ${staffList.length}人</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">平均</small><div style="font-family:var(--font-num);font-size:24px">${avg}点</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">100点</small><div style="font-family:var(--font-num);font-size:24px">${hit}人</div></div></div>
       <p class="sub">名前をタップすると、点数の内訳、ふりかえり、課題の指定が出ます。</p>
       <div class="staff">${list}</div>`
-      : `<p class="sub">まだ誰も登録していません。上の「メンバー」にスタッフのGmailを追加して、アプリのアドレスを伝えてください。</p>`}</section>`;
+      : `<p class="sub">まだ誰も登録していません。下の「メンバー」にスタッフのGmailを追加して、アプリのアドレスを伝えてください。</p>`}</section>` + annCard + giveCard + memberCard;
   }
 
   function render() {

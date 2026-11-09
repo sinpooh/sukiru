@@ -189,8 +189,8 @@ details.staff-d .staff-row { background: transparent; }
 .gcard small { font-size: 12px; color: var(--muted); }
 .gcard.me { outline: 3px solid var(--accent); }
 .field-card { padding: 0; overflow: hidden; }
-.field { position: relative; aspect-ratio: 400 / 320; }
-.field .land { position: absolute; inset: 0; width: 100%; height: 100%; }
+.field { position: relative; aspect-ratio: 800 / 875; }
+.field .land { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .roam { position: absolute; transform: translate(-50%, -85%); background: none; border: 0; padding: 0; width: var(--w); display: flex; flex-direction: column; align-items: center; animation: roambob 2.6s ease-in-out infinite; animation-delay: var(--delay); }
 .roam svg { width: 100%; height: auto; filter: drop-shadow(0 2px 0 rgba(0,0,0,.08)); }
 .roam .shadow { position: absolute; bottom: 14px; width: 70%; height: 8px; border-radius: 50%; background: rgba(0,0,0,.15); }
@@ -858,7 +858,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/9-5</p>
+        <p class="sub">バージョン：11/9-6</p>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>
@@ -879,7 +879,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   }
 
   // field spots (x%, y%) from back to front
-  const SPOTS = [[14,66],[40,63],[64,66],[88,64],[26,78],[54,77],[78,80],[10,90],[40,92],[66,93],[90,92],[24,66]];
+  const SPOTS = [[18,52],[42,50],[64,48],[86,54],[30,66],[54,64],[16,80],[42,80],[68,79],[88,82],[28,94],[56,94],[80,96]];
   const SIZE = [68, 46, 60, 78];
   function viewAll() {
     if (!dragonsLoaded) return `<div class="loading">みんなのドラゴンを読みこみ中…</div>`;
@@ -899,20 +899,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         <div class="steps">${steps}</div><small class="stname">${STAGES[st]}</small></div>`;
     }).join("");
     return `<section class="card field-card"><div class="field">
-        <svg class="land" viewBox="0 0 400 320" preserveAspectRatio="none" aria-hidden="true">
-          <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd9a8"/><stop offset=".55" stop-color="#ffe9c9"/><stop offset="1" stop-color="#d9f0e0"/></linearGradient>
-          <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fcf7a"/><stop offset="1" stop-color="#5daa5a"/></linearGradient></defs>
-          <rect width="400" height="320" fill="url(#sky)"/>
-          <circle cx="320" cy="58" r="26" fill="#fff3c4"/>
-          <path d="M0 150 L60 92 L110 130 L170 70 L230 128 L290 84 L350 124 L400 100 L400 170 L0 170Z" fill="#b9a7d6" opacity=".55"/>
-          <path d="M150 150 L200 60 L250 150Z" fill="#9a7fc2"/><path d="M190 78 L200 60 L210 78 L204 74 L200 80 L196 74Z" fill="#ff8a4c"/>
-          <path d="M196 56 q-6 -14 4 -22 q-2 10 6 14 q-4 6 -10 8Z" fill="#ffb27a" opacity=".8"/>
-          <path d="M0 165 Q100 140 200 158 T400 150 L400 320 L0 320Z" fill="url(#gr)"/>
-          <ellipse cx="300" cy="235" rx="44" ry="12" fill="#7fc4e6" opacity=".85"/>
-          <g fill="#4e8f4b"><circle cx="30" cy="160" r="16"/><circle cx="48" cy="166" r="12"/><circle cx="372" cy="156" r="14"/><circle cx="356" cy="164" r="10"/></g>
-          <g fill="#fff" opacity=".9"><ellipse cx="80" cy="40" rx="26" ry="9"/><ellipse cx="96" cy="34" rx="16" ry="9"/><ellipse cx="250" cy="28" rx="20" ry="7"/></g>
-          <g fill="#ffd34d"><circle cx="120" cy="250" r="3"/><circle cx="240" cy="290" r="3"/><circle cx="60" cy="270" r="2.5"/><circle cx="350" cy="280" r="2.5"/></g>
-        </svg>${field}</div>
+        <img class="land" src="img/field.webp" alt="" aria-hidden="true">${field}</div>
         <div class="field-head"><h2>ドラゴンの原っぱ</h2><p class="sub">みんなのドラゴンが暮らしています。タップすると誰のドラゴンかわかります。</p></div></section>
       <section class="card"><h2>ドラゴン図鑑 <small class="count">${list.length}ひき</small></h2>
         <div class="tally">${STAGES.map((n, k) => `<span>${n} <b>${counts[k]}</b></span>`).join("")}</div>

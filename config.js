@@ -9,5 +9,5 @@ window.SKIRU_CONFIG = {
     appId: "1:275214002600:web:fe480dd289a69fc7d3159d"
   },
   // 管理者のGoogleアカウント
-  adminEmails: ["sinpooh@urukau-ichioshi.com"]
+  adminEmails: ["sinpooh@urukau-ichioshi.com", "watanabesae@urukau-ichioshi.com"]
 };

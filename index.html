@@ -119,6 +119,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .hina-wing { transform-box: view-box; transform-origin: 126px 104px; animation: hinaFlap 1.6s ease-in-out infinite; }
 @keyframes hinaFlap { 0%,60%,100% { transform: rotate(0deg); } 70% { transform: rotate(-22deg); } 80% { transform: rotate(4deg); } 90% { transform: rotate(-16deg); } }
 @media (prefers-reduced-motion: reduce) { .hina-wing { animation: none; } }
+.check-line { display: flex; align-items: center; gap: 8px; font-size: 15px; margin: 6px 0 10px; }
+.check-line input { width: 22px; height: 22px; }
 .mini { padding: 6px 9px; font-size: 13px; background: var(--panel); border: 1px solid var(--line); }
 .primary { background: var(--accent); color: #fff; padding: 12px 16px; font-size: 15px; border-radius: 14px; }
 .primary:disabled { opacity: .45; cursor: default; }
@@ -800,10 +802,50 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     el.innerHTML = `<div class="confetti">${bits}</div><div class="cele-card" role="alert">${st === 3 ? `<div class="cele-rays"></div>` : ""}<div class="cele-glow"></div><div class="cele-dragon">${dragonSVG(st, S.color, "cele-d")}${fire}</div>
       <div class="cele-title">本日の100点達成！</div><div class="cele-sub">おめでとう！ ${cf.sub(nm)}</div><div class="cele-score">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
     el.hidden = false;
+    playSfx("100");
     try { navigator.vibrate && navigator.vibrate(st === 3 ? [80, 40, 80, 40, 200] : [60, 40, 120]); } catch (e) {}
     clearTimeout(celebrate.t); celebrate.t = setTimeout(closeCelebrate, st === 3 ? 4800 : 4200);
   }
   // evolution right when the 3rd straight 100 is reached. egg -> chick: the egg shakes, cracks and splits open
+  // sound effects (made in code; played after the person has touched the screen at least once)
+  let actx = null;
+  const sfxOn = () => { try { return localStorage.getItem("skiru-sfx") !== "off"; } catch (e) { return true; } };
+  function ac() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); } catch (e) { actx = null; } return actx; }
+  document.addEventListener("pointerdown", () => { if (sfxOn()) ac(); }, { once: true, capture: true });
+  const NOTE = n => 440 * Math.pow(2, (n - 69) / 12);
+  function beep(c, f, t, d, type, vol, out) {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0008, t + d);
+    o.connect(g).connect(out); o.start(t); o.stop(t + d + 0.05);
+  }
+  function playSfx(kind) {
+    if (!sfxOn()) return; const c = ac(); if (!c) return;
+    try {
+      const t = c.currentTime + 0.05, out = c.createGain(); out.gain.value = 0.5; out.connect(c.destination);
+      if (kind === "100") {
+        [72, 76, 79].forEach((n, i) => beep(c, NOTE(n), t + i * 0.09, 0.16, "square", 0.18, out));
+        const e = t + 0.3;
+        [84, 88, 91].forEach(n => beep(c, NOTE(n), e, 1.1, "square", 0.12, out));
+        [72, 60].forEach(n => beep(c, NOTE(n), e, 1.1, "triangle", 0.3, out));
+        [96, 100, 103, 108].forEach((n, i) => beep(c, NOTE(n), e + 0.12 + i * 0.07, 0.25, "sine", 0.12, out));
+      } else {
+        const o = c.createOscillator(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+        o.type = "triangle"; o.frequency.setValueAtTime(NOTE(60), t); o.frequency.exponentialRampToValueAtTime(NOTE(96), t + 1.1);
+        lfo.frequency.value = 14; lg.gain.value = 30; lfo.connect(lg).connect(o.frequency);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.22, t + 0.9); g.gain.linearRampToValueAtTime(0, t + 1.15);
+        o.connect(g).connect(out); o.start(t); lfo.start(t); o.stop(t + 1.2); lfo.stop(t + 1.2);
+        for (let i = 0; i < 10; i++) beep(c, NOTE(84 + (i % 5) * 3), t + 0.4 + i * 0.07, 0.12, "sine", 0.08, out);
+        const f = t + 1.25;
+        [[67, 0], [67, 0.16], [67, 0.32], [72, 0.5]].forEach(([n, d], i) => {
+          const last = i === 3, len = last ? 1.6 : 0.13;
+          [n, n + 4, n + 7].forEach(m => beep(c, NOTE(m), f + d, len, "square", last ? 0.1 : 0.12, out));
+          beep(c, NOTE(n - 12), f + d, len, "triangle", 0.3, out);
+        });
+        [84, 88, 91, 96].forEach((n, i) => beep(c, NOTE(n + 12), f + 0.62 + i * 0.08, 0.5, "sine", 0.09, out));
+      }
+    } catch (e) {}
+  }
   function evolve(from, to, sc) {
     const el = $("#celebrate"), nm = S.dragonName ? esc(S.dragonName) : "ドラゴン";
     const bits = Array.from({ length: 50 }, (_, i) => `<i class="fall" style="--x:${Math.round(Math.random() * 100)}%;--c:${["#ffd34d", "#ff8fb1", "#5bc0eb", "#9bdb6b", "#ff7a59"][i % 5]};--d:${(2 + Math.random() * .9).toFixed(2)}s;--r:${Math.round(Math.random() * 720 - 360)}deg;--s:${(.7 + Math.random() * .8).toFixed(2)}">${["★", "●", "■", "♥"][i % 4]}</i>`).join("");
@@ -820,6 +862,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <div class="evo-stage">${stageOld}<div class="evo-new">${neu}</div></div>
       <div class="cele-title evo-t">${title}</div><div class="cele-sub evo-t">3日連続100点達成！ ${sub}</div><div class="cele-score evo-t">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
     el.hidden = false;
+    playSfx("evo");
     try { navigator.vibrate && navigator.vibrate([40, 60, 40, 60, 40, 200, 300]); } catch (e) {}
     clearTimeout(celebrate.t); celebrate.t = setTimeout(() => { closeCelebrate(); render(); }, 7000);
   }
@@ -937,7 +980,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/10-7</p>
+        <p class="sub">バージョン：11/10-8</p>
+        <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>
@@ -1172,6 +1216,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   });
 
   document.addEventListener("change", e => {
+    if (e.target.id === "set-sfx") { try { localStorage.setItem("skiru-sfx", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) playSfx("100"); return; }
     if (e.target.id === "ann-date") { annDate = e.target.value; render(); return; }
     if (!S) return;
     const t = e.target, d = t.dataset;

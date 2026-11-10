@@ -272,6 +272,32 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 .st3 .cele-glow { background: radial-gradient(circle, rgba(255, 200, 60, .95), rgba(255, 140, 40, 0) 72%); width: 240px; height: 240px; }
 .cele-rays { position: absolute; left: 50%; top: 90px; width: 520px; height: 520px; transform: translate(-50%, -50%); background: repeating-conic-gradient(rgba(255, 210, 80, .28) 0 10deg, transparent 10deg 22deg); border-radius: 50%; animation: spin 6s linear infinite; -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 46%); mask-image: radial-gradient(circle, #000 18%, transparent 46%); }
 .st3 .cele-card { padding-top: 40px; }
+.evo-stage { position: relative; width: 150px; height: 150px; margin: 0 auto; }
+.evo-stage svg { width: 150px; height: 150px; }
+.evo-stage .dragon-body { animation: none; }
+.evo-old, .evo-new, .evo-old .half, .evo-old .crack { position: absolute; inset: 0; }
+.evo-new { opacity: 0; transform: scale(.3); animation: evoNew .7s cubic-bezier(.2,1.6,.4,1) 2.1s forwards; }
+@keyframes evoNew { to { opacity: 1; transform: scale(1); } }
+.evo-old { animation: evoShake .14s ease-in-out 0s 12; transform-origin: 50% 85%; }
+@keyframes evoShake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-7deg); } 75% { transform: rotate(7deg); } }
+.evolve:not(.hatch) .evo-old { animation: evoShake .14s ease-in-out 0s 12, evoGone .5s ease-in 1.8s forwards; }
+.evolve:not(.hatch) .evo-old svg { animation: evoWhite 1.7s ease-in forwards; }
+@keyframes evoWhite { to { filter: brightness(3) saturate(0); } }
+@keyframes evoGone { to { opacity: 0; transform: scale(1.3); } }
+.evo-old .half.top { clip-path: polygon(0 0, 100% 0, 100% 56%, 72% 56%, 67% 60%, 61% 53%, 54% 62%, 48% 52%, 41% 61%, 36% 54%, 29% 59%, 0 59%); animation: evoTop .7s ease-in 1.75s forwards; }
+.evo-old .half.bottom { clip-path: polygon(0 59%, 29% 59%, 36% 54%, 41% 61%, 48% 52%, 54% 62%, 61% 53%, 67% 60%, 72% 56%, 100% 56%, 100% 100%, 0 100%); animation: evoBottom .7s ease-in 1.75s forwards; }
+@keyframes evoTop { to { transform: translate(-40px, -70px) rotate(-35deg); opacity: 0; } }
+@keyframes evoBottom { to { transform: translate(30px, 50px) rotate(25deg); opacity: 0; } }
+.evo-old .crack path { stroke-dasharray: 140; stroke-dashoffset: 140; animation: evoCrack .6s linear 1s forwards; }
+.evo-old .crack { animation: evoGone .2s linear 1.75s forwards; }
+@keyframes evoCrack { to { stroke-dashoffset: 0; } }
+.evo-flash { position: absolute; left: 50%; top: 95px; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; background: radial-gradient(circle, #fff, rgba(255,255,255,0) 70%); opacity: 0; animation: evoFlash .8s ease-out 1.8s; pointer-events: none; z-index: 2; }
+@keyframes evoFlash { 0% { opacity: 0; transform: scale(.5); } 30% { opacity: 1; transform: scale(5); } 100% { opacity: 0; transform: scale(7); } }
+.evo-t { opacity: 0; animation: evoIn .5s ease-out 2.4s forwards; }
+@keyframes evoIn { to { opacity: 1; } }
+.evolve .confetti i { animation-delay: var(--d) !important; }
+@media (prefers-reduced-motion: reduce) { .evo-old { display: none; } .evo-new, .evo-t { animation: none; opacity: 1; transform: none; } }
+
 @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 .cele-fire { position: absolute; left: 66%; top: 14%; width: 70px; height: 30px; pointer-events: none; }
 .cele-fire i { position: absolute; left: 0; top: 8px; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle, #fff6b0, #ffb02e 45%, #ff4e1f 75%, transparent 76%); animation: flame .7s ease-out infinite; }
@@ -502,7 +528,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const worked = S.today.checkedIn || sc > 0;
     if (worked) {
       let msg;
-      if (sc >= 100) {
+      if (S.today.evolved) msg = `${sc}点。この日に${STAGES[S.stage]}に進化しました`;
+      else if (sc >= 100) {
         S.streak++;
         if (S.stage < 3 && S.streak >= GROW_DAYS) { S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${STAGES[S.stage]}になりました`; }
         else msg = `100点達成！ 連続${S.streak}日目`;
@@ -732,7 +759,13 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     { sub: n => `${n}が空を舞って火をふいた！ さすが成竜！`, chars: ["■", "●", "★", "▲"], cols: ["#ffd34d", "#ff8a3d", "#ff5a36", "#fff1a8", "#f2b630"], n: 64, fall: "fall" }
   ];
   function celebrate(sc) {
-    S.today.celebrated = true; persist();
+    S.today.celebrated = true;
+    if (S.stage < 3 && (S.streak || 0) + 1 >= GROW_DAYS && !S.today.evolved) {
+      const from = S.stage; S.stage++; S.streak = 0; S.today.evolved = true;
+      S.lastResult = { date: S.today.date, msg: `進化！ ${STAGES[S.stage]}になりました` };
+      persist(); evolve(from, S.stage, sc); return;
+    }
+    persist();
     const el = $("#celebrate"), st = Math.max(0, Math.min(3, S.stage || 0)), cf = CELE[st];
     const nm = S.dragonName ? esc(S.dragonName) : STAGES[st];
     const bits = Array.from({ length: cf.n }, (_, i) => `<i class="${cf.fall}" style="--x:${Math.round(Math.random() * 100)}%;--c:${cf.cols[i % cf.cols.length]};--d:${(Math.random() * .9).toFixed(2)}s;--r:${Math.round(Math.random() * 720 - 360)}deg;--s:${(.7 + Math.random() * .8).toFixed(2)}">${cf.chars[i % cf.chars.length]}</i>`).join("");
@@ -743,6 +776,26 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     el.hidden = false;
     try { navigator.vibrate && navigator.vibrate(st === 3 ? [80, 40, 80, 40, 200] : [60, 40, 120]); } catch (e) {}
     clearTimeout(celebrate.t); celebrate.t = setTimeout(closeCelebrate, st === 3 ? 4800 : 4200);
+  }
+  // evolution right when the 3rd straight 100 is reached. egg -> chick: the egg shakes, cracks and splits open
+  function evolve(from, to, sc) {
+    const el = $("#celebrate"), nm = S.dragonName ? esc(S.dragonName) : "ドラゴン";
+    const bits = Array.from({ length: 50 }, (_, i) => `<i class="fall" style="--x:${Math.round(Math.random() * 100)}%;--c:${["#ffd34d", "#ff8fb1", "#5bc0eb", "#9bdb6b", "#ff7a59"][i % 5]};--d:${(2 + Math.random() * .9).toFixed(2)}s;--r:${Math.round(Math.random() * 720 - 360)}deg;--s:${(.7 + Math.random() * .8).toFixed(2)}">${["★", "●", "■", "♥"][i % 4]}</i>`).join("");
+    const egg = from === 0;
+    const old = dragonSVG(from, S.color, "cele-d"), neu = dragonSVG(to, S.color, "cele-d");
+    const stageOld = egg
+      ? `<div class="evo-old egg"><div class="half top">${old}</div><div class="half bottom">${old}</div>
+          <svg class="crack" viewBox="0 0 200 200"><path d="M58 118 L72 108 L82 122 L96 104 L108 124 L122 106 L134 120 L144 112" fill="none" stroke="#3a2a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
+      : `<div class="evo-old">${old}</div>`;
+    const title = egg ? "たまごがわれた！" : "進化した！";
+    const sub = egg ? `${nm}が生まれたよ！ ヒナになりました` : `${nm}が${STAGES[to]}になりました！`;
+    el.className = "celebrate evolve" + (egg ? " hatch" : "");
+    el.innerHTML = `<div class="confetti">${bits}</div><div class="cele-card" role="alert"><div class="cele-glow"></div><div class="evo-flash"></div>
+      <div class="evo-stage">${stageOld}<div class="evo-new">${neu}</div></div>
+      <div class="cele-title evo-t">${title}</div><div class="cele-sub evo-t">3日連続100点達成！ ${sub}</div><div class="cele-score evo-t">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
+    el.hidden = false;
+    try { navigator.vibrate && navigator.vibrate([40, 60, 40, 60, 40, 200, 300]); } catch (e) {}
+    clearTimeout(celebrate.t); celebrate.t = setTimeout(() => { closeCelebrate(); render(); }, 7000);
   }
   function closeCelebrate() { const el = $("#celebrate"); if (el) { el.hidden = true; el.innerHTML = ""; } }
   function verdict(score) {
@@ -858,7 +911,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/10-1</p>
+        <p class="sub">バージョン：11/10-2</p>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>
@@ -1017,7 +1070,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     updateScore();
   }
 
-  document.getElementById("celebrate").addEventListener("click", () => { clearTimeout(celebrate.t); closeCelebrate(); });
+  document.getElementById("celebrate").addEventListener("click", () => { const ev = $("#celebrate").classList.contains("evolve"); clearTimeout(celebrate.t); closeCelebrate(); if (ev) render(); });
   document.addEventListener("click", async e => {
     const b = e.target.closest("button"); if (!b) return;
     const d = b.dataset;

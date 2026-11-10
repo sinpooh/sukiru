@@ -504,7 +504,19 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     }).join("");
     return `<button class="ghost" data-histclose="${esc(key)}">最近2週間だけにもどす</button><p class="sub">日付をタップすると、その日の内訳が見られます。</p>${body}`;
   }
-  let growFx = false;
+  let growFx = false, pendingEvo = null;
+  // show an evolution the person hasn't seen yet: one decided when yesterday was closed,
+  // or today's 3rd straight 100 that was reached before instant evolution existed
+  function showPendingEvo() {
+    if (!S) return;
+    if (pendingEvo) { const e = pendingEvo; pendingEvo = null; setTimeout(() => evolve(e.from, e.to, e.sc), 400); return; }
+    const sc = dayScore(S);
+    if (S.today && S.today.date === todayStr() && sc >= 100 && !S.today.evolved && S.stage < 3 && (S.streak || 0) + 1 >= GROW_DAYS) {
+      const from = S.stage; S.stage++; S.streak = 0; S.today.evolved = true; S.today.celebrated = true;
+      S.lastResult = { date: S.today.date, msg: `進化！ ${STAGES[S.stage]}になりました` };
+      persist(); setTimeout(() => evolve(from, S.stage, sc), 400);
+    }
+  }
   let banner = "";
   let booted = false;
   let authUser = null, notMember = false, needLogin = false, members = [], membersLoaded = false;
@@ -531,7 +543,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       if (S.today.evolved) msg = `${sc}点。この日に${STAGES[S.stage]}に進化しました`;
       else if (sc >= 100) {
         S.streak++;
-        if (S.stage < 3 && S.streak >= GROW_DAYS) { S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${STAGES[S.stage]}になりました`; }
+        if (S.stage < 3 && S.streak >= GROW_DAYS) { pendingEvo = { from: S.stage, to: S.stage + 1, sc }; S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${STAGES[S.stage]}になりました`; }
         else msg = `100点達成！ 連続${S.streak}日目`;
       } else if (sc <= 80) {
         const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0;
@@ -911,7 +923,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/10-2</p>
+        <p class="sub">バージョン：11/10-3</p>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>
@@ -1186,7 +1198,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         if (snap.exists && !dirty && !writing) { const d = snap.data(); if ((d.rev || 0) !== ((base && base.rev) || 0) || (d.updatedAt || "") !== ((base && base.updatedAt) || "")) { adopt(d); render(); } }
       } catch (e) {}
     }
-    if (rollover()) { render(); persist(); if (S.lastResult) toast(S.lastResult.msg); }
+    if (rollover()) { render(); persist(); if (pendingEvo) showPendingEvo(); else if (S.lastResult) toast(S.lastResult.msg); }
   });
 
   // ---- boot ----
@@ -1229,7 +1241,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
           first = false; booted = true;
           if (snap.exists) { adopt(snap.data()); created = true; }
           if (isOwner && !S) tab = "admin";
-          if (S && rollover()) { persist(); if (S.lastResult) setTimeout(() => toast(S.lastResult.msg), 300); }
+          if (S && rollover()) { persist(); if (!pendingEvo && S.lastResult) setTimeout(() => toast(S.lastResult.msg), 300); }
+          setTimeout(showPendingEvo, 300);
           render();
           return;
         }

@@ -934,7 +934,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/10-5</p>
+        <p class="sub">バージョン：11/10-6</p>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>
@@ -956,7 +956,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 
   // field spots (x%, y%) from back to front
   const SPOTS = [[18,52],[42,50],[64,48],[86,54],[30,66],[54,64],[16,80],[42,80],[68,79],[88,82],[28,94],[56,94],[80,96]];
-  const SIZE = [68, 46, 60, 78];
+  const SIZE = [68, 80, 88, 100];
   function viewAll() {
     if (!dragonsLoaded) return `<div class="loading">みんなのドラゴンを読みこみ中…</div>`;
     const list = [...dragons].sort((a, b) => String(a.id).localeCompare(String(b.id)));

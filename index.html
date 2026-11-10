@@ -121,6 +121,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (prefers-reduced-motion: reduce) { .hina-wing { animation: none; } }
 .check-line { display: flex; align-items: center; gap: 8px; font-size: 15px; margin: 6px 0 10px; }
 .check-line input { width: 22px; height: 22px; }
+.fh-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bgm-btn[aria-pressed="true"] { background: #e8f4ec; color: #2d7a4f; border-color: #9fd0b3; }
 .mini { padding: 6px 9px; font-size: 13px; background: var(--panel); border: 1px solid var(--line); }
 .primary { background: var(--accent); color: #fff; padding: 12px 16px; font-size: 15px; border-radius: 14px; }
 .primary:disabled { opacity: .45; cursor: default; }
@@ -417,6 +419,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
+<script src="bgm.js"></script>
 <script>
 (() => {
   const STAGES = ["たまご", "ヒナ", "こども", "成竜"];
@@ -819,6 +822,15 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0008, t + d);
     o.connect(g).connect(out); o.start(t); o.stop(t + d + 0.05);
   }
+  const bgmOn = () => { try { return localStorage.getItem("skiru-bgm") !== "off"; } catch (e) { return true; } };
+  function setBgm(on) { try { localStorage.setItem("skiru-bgm", on ? "on" : "off"); } catch (e) {} }
+  // the field music plays only while the field tab is open and the app is on screen
+  function syncBgm() {
+    if (!window.SkiruBGM) return;
+    const want = tab === "all" && booted && !!S && bgmOn() && document.visibilityState === "visible";
+    if (want && !SkiruBGM.playing) { const c = ac(); if (c) SkiruBGM.start(c); }
+    else if (!want && SkiruBGM.playing) SkiruBGM.stop();
+  }
   function playSfx(kind) {
     if (!sfxOn()) return; const c = ac(); if (!c) return;
     try {
@@ -980,7 +992,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/10-8</p>
+        <p class="sub">バージョン：11/10-9</p>
+        <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
@@ -1023,7 +1036,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     }).join("");
     return `<section class="card field-card"><div class="field">
         <img class="land" src="img/field.webp" alt="" aria-hidden="true">${field}</div>
-        <div class="field-head"><h2>ドラゴンの原っぱ</h2><p class="sub">みんなのドラゴンが暮らしています。タップすると誰のドラゴンかわかります。</p></div></section>
+        <div class="field-head"><div class="fh-row"><h2>ドラゴンの原っぱ</h2><button class="mini bgm-btn" id="bgm-toggle" aria-pressed="${bgmOn()}">${bgmOn() ? "♪ BGM オン" : "BGM オフ"}</button></div><p class="sub">みんなのドラゴンが暮らしています。タップすると誰のドラゴンかわかります。</p></div></section>
       <section class="card"><h2>ドラゴン図鑑 <small class="count">${list.length}ひき</small></h2>
         <div class="tally">${STAGES.map((n, k) => `<span>${n} <b>${counts[k]}</b></span>`).join("")}</div>
         ${list.length ? `<div class="book">${book}</div>` : `<p class="sub">まだ誰もドラゴンを持っていません。</p>`}</section>`;
@@ -1124,6 +1137,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     $("#tabs").innerHTML = tabs.map(([k, l, ic]) => `<button data-tab="${k}" ${tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("");
     growFx = false;
     liveBar();
+    syncBgm();
   }
 
   function pickTask() {
@@ -1149,6 +1163,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (d.histclose) { histOpen.delete(d.histclose); render(); return; }
     if (d.peek) { const g = dragons.find(x => x.id === d.peek); if (g) toast(`${g.id === uid ? "あなた" : (g.name || "だれか") + "さん"}のドラゴン「${g.dragonName || STAGES[g.stage || 0]}」・${STAGES[g.stage || 0]}`); return; }
     if (b.id === "login") { login(); return; }
+    if (b.id === "bgm-toggle") { setBgm(!bgmOn()); render(); return; }
     if (b.id === "logout" || b.id === "logout2") { await flush(); await firebase.auth().signOut(); location.reload(); return; }
     if (b.id === "add-member") {
       const inp = $("#new-member"); const em = inp.value.trim().toLowerCase();
@@ -1216,6 +1231,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   });
 
   document.addEventListener("change", e => {
+    if (e.target.id === "set-bgm") { setBgm(e.target.checked); return; }
     if (e.target.id === "set-sfx") { try { localStorage.setItem("skiru-sfx", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) playSfx("100"); return; }
     if (e.target.id === "ann-date") { annDate = e.target.value; render(); return; }
     if (!S) return;
@@ -1245,6 +1261,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   document.addEventListener("focusin", e => { if (e.target.dataset && e.target.dataset.val) e.target.select(); });
   // coming back to the app: first pull the latest save (another phone/PC may have changed it), then close yesterday
   document.addEventListener("visibilitychange", async () => {
+    syncBgm();
     if (document.visibilityState === "hidden") {
       const a = document.activeElement; if (a && a.tagName === "INPUT") a.blur();   // finishes a half-typed name
       if (dirty) { clearTimeout(saveTimer); flush(); }

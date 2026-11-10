@@ -272,6 +272,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 .st3 .cele-glow { background: radial-gradient(circle, rgba(255, 200, 60, .95), rgba(255, 140, 40, 0) 72%); width: 240px; height: 240px; }
 .cele-rays { position: absolute; left: 50%; top: 90px; width: 520px; height: 520px; transform: translate(-50%, -50%); background: repeating-conic-gradient(rgba(255, 210, 80, .28) 0 10deg, transparent 10deg 22deg); border-radius: 50%; animation: spin 6s linear infinite; -webkit-mask-image: radial-gradient(circle, #000 18%, transparent 46%); mask-image: radial-gradient(circle, #000 18%, transparent 46%); }
 .st3 .cele-card { padding-top: 40px; }
+.stk { font-weight: 700; color: var(--muted); white-space: nowrap; }
+.stk.on { color: #c7801a; }
+.stk.hot { color: #d9462a; }
 .evo-stage { position: relative; width: 150px; height: 150px; margin: 0 auto; }
 .evo-stage svg { width: 150px; height: 150px; }
 .evo-stage .dragon-body { animation: none; }
@@ -474,6 +477,13 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       out.push({ date: t, s: dayScore(d), res: d.today.reflect && d.today.reflect.result || null, items: snapDay(d), live: true });
     return out.sort((a, b) => a.date < b.date ? -1 : 1);
   }
+  // how many worked days in a row reached 100 (today counts once it reaches 100; days off don't break it)
+  function streak100(d) {
+    const r = records(d).reverse(); let n = 0;
+    for (const h of r) { if (h.live && h.s < 100) continue; if (h.s >= 100) n++; else break; }
+    return n;
+  }
+  const streakTag = d => { const n = streak100(d); return `<span class="stk${n >= 3 ? " hot" : n ? " on" : ""}">連続100点 ${n}日</span>`; };
   const fullDate = s => { const w = "日月火水木金土"[new Date(s + "T00:00:00").getDay()]; return `${Number(s.slice(5, 7))}月${Number(s.slice(8, 10))}日（${w}）`; };
   const tone = s => s >= 100 ? "good" : s > 80 ? "warn" : "bad";
 
@@ -923,7 +933,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/10-3</p>
+        <p class="sub">バージョン：11/10-4</p>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
         <label class="field">ドラゴンの名前<input type="text" id="set-dragon" maxlength="12" value="${esc(S.dragonName || "")}"></label>
         <label class="field">担当業務<select id="set-job">${(JOBS.includes(S.job) ? JOBS : [S.job, ...JOBS]).map(j => `<option ${j === S.job ? "selected" : ""}>${esc(j)}</option>`).join("")}</select></label>
@@ -984,7 +994,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       const hist = historyBlock(records(d).filter(h => !h.live), d.id);
       const rt = d.ratings || {};
       return `<details class="staff-d"${histOpen.has(d.id) ? " open" : ""}><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", d.streak || 0)}
-        <div class="nm"><span class="dot" style="background:${esc(d.color)};width:10px;height:10px;margin-right:6px;border:none;box-shadow:none"></span>${esc(d.name)}<small>${esc(d.job)} ・ ${STAGES[d.stage || 0]} ・ ${status}</small></div>
+        <div class="nm"><span class="dot" style="background:${esc(d.color)};width:10px;height:10px;margin-right:6px;border:none;box-shadow:none"></span>${esc(d.name)}<small>${esc(d.job)} ・ ${STAGES[d.stage || 0]} ・ ${status} ・ ${streakTag(d)}</small></div>
         <span class="pill ${sc === null ? "warn" : tone(sc)}">${sc === null ? "−" : sc}</span></div></summary>
         <div class="staff-detail">
           ${tk ? `<div><b>今日の課題：</b>${esc(tk)}</div>` : ""}

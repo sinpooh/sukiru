@@ -123,6 +123,38 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .check-line input { width: 22px; height: 22px; }
 .fh-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .bgm-btn[aria-pressed="true"] { background: #e8f4ec; color: #2d7a4f; border-color: #9fd0b3; }
+.hrs-kind { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hrs-kind button { background: var(--bg); border: 1px solid var(--line); padding: 14px 6px; font-size: 15px; font-weight: 700; }
+.hrs-kind button.none { border-color: var(--good); color: var(--good); }
+.hrs-kind button.issue { border-color: var(--accent); color: var(--accent); }
+.hrs-q { display: grid; gap: 6px; margin-top: 12px; }
+.hrs-q > b { font-size: 15px; }
+.hrs-q > b small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.hrs-q textarea { min-height: 58px; }
+.hrs-unk { justify-self: start; background: var(--bg); border: 1px solid var(--line); padding: 6px 12px; font-size: 13px; }
+.hrs-unk[aria-pressed="true"] { background: var(--muted); color: var(--panel); border-color: var(--muted); }
+.hrs-hint { font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+.hrs-actions { display: flex; gap: 8px; margin-top: 12px; }
+.hrs-actions .primary { flex: 1; }
+.hrs-sum { display: grid; gap: 8px; }
+.hrs-tag { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; background: var(--bg); color: var(--muted); }
+.hrs-tag.none { background: color-mix(in oklab, var(--good) 15%, var(--panel)); color: var(--good); }
+.hrs-tag.issue { background: var(--accent-soft); color: var(--accent); }
+.hrs-tag.imp { background: color-mix(in oklab, var(--bad) 15%, var(--panel)); color: var(--bad); }
+.hrs-tag.ok { background: color-mix(in oklab, var(--good) 15%, var(--panel)); color: var(--good); }
+.hrs-line { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.hrs-line b { color: var(--muted); font-weight: 700; margin-right: 4px; }
+.hrs-pts { display: flex; align-items: baseline; gap: 8px; font-size: 14px; }
+.hrs-pts b { font-family: var(--font-num); font-size: 26px; color: var(--accent); }
+.hrs-cmt { background: var(--accent-soft); border-radius: 12px; padding: 10px 12px; font-size: 14px; overflow-wrap: anywhere; }
+.hrs-cmt b { display: block; font-size: 12px; color: var(--accent); }
+.hrs-remind { border: 2px solid var(--bad); }
+.hrs-remind-msg { color: var(--bad); font-weight: 700; font-size: 14px; }
+.hrs-miss { display: flex; flex-wrap: wrap; gap: 6px; }
+.hrs-miss span { background: color-mix(in oklab, var(--bad) 12%, var(--panel)); color: var(--bad); border-radius: 99px; padding: 3px 10px; font-size: 13px; }
+.hrs-rv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.hrs-rv label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.tab-badge { display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 2px; border-radius: 99px; background: var(--bad); color: #fff; font-size: 10px; line-height: 16px; vertical-align: top; }
 .mini { padding: 6px 9px; font-size: 13px; background: var(--panel); border: 1px solid var(--line); }
 .primary { background: var(--accent); color: #fff; padding: 12px 16px; font-size: 15px; border-radius: 14px; }
 .primary:disabled { opacity: .45; cursor: default; }
@@ -470,20 +502,41 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   const nid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   // points from tasks シンプーさん gave, counted on the day they were checked off
   const taskPts = (d, date) => (d.givenTasks || []).reduce((a, g) => a + ((d.givenDone || {})[g.id] === date ? Number(g.pt) || 0 : 0), 0);
-  const dayScore = d => r1(sumItems(d.items) + (d.today ? taskPts(d, d.today.date) : 0));
-  const snapDay = d => [...snapItems(d.items), ...(d.givenTasks || []).filter(g => Number(g.pt) > 0 && d.today && (d.givenDone || {})[g.id] === d.today.date).map(g => ["タスク：" + g.text, Number(g.pt), 1])];
+  // 報連相 (report / contact / consult): up to 10 points a day.
+  // The app gives a provisional score from what was written; an admin can check and change it.
+  const HRS_REMIND_HOUR = 17;   // after this hour, a checked-in person without a report sees a reminder
+  const hlen = x => String(x || "").trim().length;
+  function hrsAuto(h) {
+    if (!h) return { info: 0, cause: 0, act: 0 };
+    return {
+      info: h.kind === "none" ? 3 : hlen(h.what) >= 8 ? 3 : hlen(h.what) ? 1 : 0,
+      cause: h.unknown ? 1 : hlen(h.why) >= 5 ? 3 : hlen(h.why) ? 1 : 0,
+      act: hlen(h.act) >= 5 ? 4 : hlen(h.act) ? 2 : 0
+    };
+  }
+  const hrsSum = p => (Number(p.info) || 0) + (Number(p.cause) || 0) + (Number(p.act) || 0);
+  const hrsReviewOf = (d, date) => (d.hrsReview || {})[date] || null;
+  const hrsPtsOf = (d, date, h) => { if (!h) return 0; const rv = hrsReviewOf(d, date); return rv && rv.pts ? hrsSum(rv.pts) : hrsSum(hrsAuto(h)); };
+  const hrsToday = d => d.today && d.today.hrs ? d.today.hrs : null;
+  const dayScore = d => r1(sumItems(d.items) + (d.today ? taskPts(d, d.today.date) + hrsPtsOf(d, d.today.date, hrsToday(d)) : 0));
+  const snapDay = d => [...snapItems(d.items), ...(hrsToday(d) && d.today && hrsPtsOf(d, d.today.date, hrsToday(d)) > 0 ? [["報連相", hrsPtsOf(d, d.today.date, hrsToday(d)), 1]] : []), ...(d.givenTasks || []).filter(g => Number(g.pt) > 0 && d.today && (d.givenDone || {})[g.id] === d.today.date).map(g => ["タスク：" + g.text, Number(g.pt), 1])];
   // the database can't hold a list inside a list, so each day's breakdown is saved as {n, p, v}
   const rowOf = r => Array.isArray(r) ? r : [r.n, r.p, r.v];
   const rowSave = r => Array.isArray(r) ? { n: r[0], p: r[1], v: r[2] } : r;
   const snapItems = items => (items || []).filter(it => Number(it.val) > 0).map(it => [it.name, Number(it.pt) || 0, Number(it.val) || 0]);
   // every finished day for one staff record, including a day not closed yet because they haven't opened the app since
   function records(d) {
-    const out = [...(d.history || [])];
+    const out = (d.history || []).map(h => {
+      if (!h.hrs) return h;
+      const now = hrsPtsOf(d, h.date, h.hrs), was = Number(h.hp) || 0;
+      if (now === was) return h;
+      return { ...h, s: r1(h.s - was + now), items: (h.items || []).map(rowOf).filter(r => r[0] !== "報連相").concat(now > 0 ? [["報連相", now, 1]] : []) };
+    });
     const t = todayStr();
     if (d.today && d.today.date && d.today.date < t && (d.today.checkedIn || dayScore(d) > 0) && !out.some(h => h.date === d.today.date))
-      out.push({ date: d.today.date, s: dayScore(d), res: d.today.reflect && d.today.reflect.result || null, items: snapDay(d) });
+      out.push({ date: d.today.date, s: dayScore(d), res: d.today.reflect && d.today.reflect.result || null, items: snapDay(d), hrs: hrsToday(d) || undefined });
     if (d.today && d.today.date === t && (d.today.checkedIn || dayScore(d) > 0))
-      out.push({ date: t, s: dayScore(d), res: d.today.reflect && d.today.reflect.result || null, items: snapDay(d), live: true });
+      out.push({ date: t, s: dayScore(d), res: d.today.reflect && d.today.reflect.result || null, items: snapDay(d), hrs: hrsToday(d) || undefined, live: true });
     return out.sort((a, b) => a.date < b.date ? -1 : 1);
   }
   // how many worked days in a row reached 100 (today counts once it reaches 100; days off don't break it)
@@ -556,7 +609,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const t = todayStr();
     if (!S.today || S.today.date === t) return false;
     const sc = dayScore(S);
-    const worked = S.today.checkedIn || sc > 0;
+    const worked = S.today.checkedIn || sc > 0 || !!hrsToday(S);
     if (worked) {
       let msg;
       if (S.today.evolved) msg = `${sc}点。この日に${STAGES[S.stage]}に進化しました`;
@@ -568,7 +621,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0;
         msg = before > S.stage ? `${sc}点で、${STAGES[S.stage]}に戻りました` : `${sc}点。たまごのまま、今日がんばろう`;
       } else { S.streak = 0; msg = `${sc}点で、ドラゴンは現状維持です`; }
-      S.history = [...(S.history || []), { date: S.today.date, s: sc, res: S.today.reflect?.result || null, items: snapDay(S) }].slice(-1000);
+      const hrs = hrsToday(S);
+      S.history = [...(S.history || []), { date: S.today.date, s: sc, res: S.today.reflect?.result || null, items: snapDay(S), ...(hrs ? { hrs: structuredClone(hrs), hp: hrsPtsOf(S, S.today.date, hrs) } : {}) }].slice(-1000);
       S.lastResult = { date: S.today.date, msg };
     }
     S.lastTask = S.today.task ? S.today.task.text : S.lastTask;
@@ -582,7 +636,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   let saveTimer = null, writing = false, dirty = false, created = false;
   let base = null;         // the last version this screen knows is on the server (to merge with saves from other phones/PCs)
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const own = d => { const { assigned, givenTasks, ...m } = d || {}; return m; };
+  const own = d => { const { assigned, givenTasks, hrsReview, ...m } = d || {}; return m; };
   // three-way merge: what this screen changed (vs base) wins, everything else comes from the server
   function mergeObj(b, l, sv, skip = []) {
     const out = {};
@@ -642,11 +696,11 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       });
       created = true;
       const merged = !same({ ...sent, rev: 0, updatedAt: 0 }, { ...result, rev: 0, updatedAt: 0 });
-      const keep = { assigned: S.assigned, givenTasks: S.givenTasks };
+      const keep = { assigned: S.assigned, givenTasks: S.givenTasks, hrsReview: S.hrsReview };
       if (dirty) { const now = own(S); S = { ...mergeDoc(sent, now, result), rev: result.rev, updatedAt: result.updatedAt, ...keep }; }
       else { S = { ...structuredClone(result), ...keep }; }
       base = structuredClone(result);
-      if (merged && !dirty) { const f = document.activeElement && document.activeElement.id; if (!(f && (f.startsWith("val-") || f.startsWith("name-") || f.startsWith("pt-") || f === "new-task" || f === "new-goal" || f === "note"))) render(); }
+      if (merged && !dirty) { const f = document.activeElement && document.activeElement.id; if (!(f && (f.startsWith("val-") || f.startsWith("name-") || f.startsWith("pt-") || f.startsWith("hrs-") || f === "new-task" || f === "new-goal" || f === "note"))) render(); }
       const pub = { name: S.name, job: S.job, color: S.color, dragonName: S.dragonName || "", stage: S.stage };
       const pubJson = JSON.stringify(pub);
       if (pubJson !== lastPublic) { await db.doc("dragons/" + uid).set(pub); lastPublic = pubJson; }
@@ -959,6 +1013,52 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${isOwner ? `<p class="sub">シンプーさんが管理だけする場合は、登録しなくて大丈夫です。下の「管理者」を開いてください。</p>` : ""}</section>`;
   }
 
+  let hrsEdit = false, hrsDraft = null;   // the report being written (kept across re-renders)
+  function hrsStartEdit(kind) {
+    const h = hrsToday(S) || {};
+    hrsDraft = { kind: kind || h.kind || "issue", what: h.what || "", why: h.why || "", unknown: !!h.unknown, act: h.act || "", important: !!h.important };
+    hrsEdit = true;
+  }
+  const hrsNeedsRemind = () => S && S.today.checkedIn && !hrsToday(S) && new Date().getHours() >= HRS_REMIND_HOUR;
+  function hrsCard() {
+    const h = hrsToday(S), date = S.today.date;
+    const rule = `<p class="sub">困ったこと・気づいたことは、小さなことでも大歓迎です。報告しても減点はありません。<br>点数：起きたことを正確に 3点 ・ 原因を自分で考える 3点 ・ 自分の行動や相談 4点（最大10点）</p>`;
+    const head = `<h2>報連相 <small class="count">最大10点</small></h2>`;
+    if (!h && !hrsEdit) {
+      return `<section class="card${hrsNeedsRemind() ? " hrs-remind" : ""}" id="hrs-card">${head}
+        ${hrsNeedsRemind() ? `<p class="hrs-remind-msg">まだ報連相をしていません。退勤前に入力しましょう。</p>` : ""}
+        <p class="sub">今日の仕事で、何かありましたか？</p>
+        <div class="hrs-kind"><button class="none" id="hrs-none">問題なし</button><button class="issue" id="hrs-issue">問題・相談あり</button></div>${rule}</section>`;
+    }
+    if (hrsEdit) {
+      const dr = hrsDraft, none = dr.kind === "none";
+      const q1 = none ? "" : `<div class="hrs-q"><b>① 何が起きた？<small>現状・問題</small></b><textarea id="hrs-what" placeholder="例：梱包材が残り少なく、明日の発送分が足りないかもしれない">${esc(dr.what)}</textarea></div>`;
+      const q2 = `<div class="hrs-q"><b>${none ? "① うまくいった理由・気づき" : "② なぜ？"}<small>${none ? "なくてもOK" : "原因"}</small></b>
+        <textarea id="hrs-why" placeholder="${none ? "例：朝いちばんに出品をまとめてやったら、はかどった" : "例：先週、注文が多くていつもより早く減った"}"${dr.unknown ? " disabled" : ""}>${esc(dr.unknown ? "" : dr.why)}</textarea>
+        ${none ? "" : `<button class="hrs-unk" id="hrs-unknown" aria-pressed="${dr.unknown}">わからない（不明）</button>`}</div>`;
+      const q3 = `<div class="hrs-q"><b>${none ? "② 次にやること" : "③ どうする？"}<small>${none ? "なくてもOK" : "自分の行動"}</small></b>
+        <textarea id="hrs-act" placeholder="${none ? "例：明日も出品を午前中に先にやる" : "例：今日中に在庫を数えて、足りない分の発注をシンプーさんに相談する"}">${esc(dr.act)}</textarea>
+        ${none ? "" : `<p class="hrs-hint">自分でできないときは、手伝ってほしいことや相談したいことを書いてください。<br>仕事のやり方を変えるときは、やる前にシンプーさんに相談しましょう。</p>`}</div>`;
+      const imp = none ? "" : `<label class="check-line"><input type="checkbox" id="hrs-imp"${dr.important ? " checked" : ""}> 重要・すぐ相談したい（管理者に目立つように知らせる）</label>`;
+      return `<section class="card" id="hrs-card">${head}
+        <p class="sub">${none ? "問題なしで報告しました（3点）。気づきと次にやることを書くと、あと7点まで増えます。" : "3つだけ答えてください。短くてOKです。"}</p>
+        ${q1}${q2}${q3}${imp}
+        <div class="hrs-actions">${h ? `<button class="ghost" id="hrs-cancel">やめる</button>` : `<button class="ghost" id="hrs-cancel">もどる</button>`}<button class="primary" id="hrs-send">${h ? "書き直して送る" : "報告する"}</button></div></section>`;
+    }
+    const rv = hrsReviewOf(S, date), pts = hrsPtsOf(S, date, h);
+    const lines = (h.kind === "none"
+      ? [["気づき", h.why], ["次にやること", h.act]]
+      : [["起きたこと", h.what], ["原因", h.unknown ? "わからない（不明）" : h.why], ["どうする", h.act]]).filter(x => hlen(x[1]))
+      .map(([k, v]) => `<div class="hrs-line"><b>${k}</b>${esc(v)}</div>`).join("");
+    const more = h.kind === "none" && !(hlen(h.why) && hlen(h.act)) ? `<button class="ghost" id="hrs-more">気づき・次にやることを書く（＋最大7点）</button>` : `<button class="ghost" id="hrs-redo">書き直す</button>`;
+    return `<section class="card" id="hrs-card">${head}<div class="hrs-sum">
+      <div><span class="hrs-tag ${h.kind === "none" ? "none" : "issue"}">${h.kind === "none" ? "問題なし" : "問題・相談あり"}</span> ${h.important ? `<span class="hrs-tag imp">重要・相談したい</span>` : ""} <small class="sub">${h.at ? new Date(h.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + "に報告" : ""}</small></div>
+      ${lines}
+      <div class="hrs-pts"><b>${pts}</b>点 / 10点 ${rv ? `<span class="hrs-tag ok">確認済み</span>` : `<span class="hrs-tag">仮の点数・確認前</span>`}</div>
+      ${rv && rv.comment ? `<div class="hrs-cmt"><b>管理者から</b>${esc(rv.comment)}</div>` : ""}
+      ${more}</div></section>`;
+  }
+
   function viewToday() {
     const sc = dayScore(S);
     const items = S.items.map(it => `<div class="item"><div class="label">${esc(it.name)}<small>${it.pt}点 × <span id="cnt-${it.id}">${it.val}</span>回 = <b id="sub-${it.id}">${r1(it.pt * it.val)}点</b></small></div>
@@ -972,10 +1072,12 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const last = S.lastResult ? `<p class="result-msg">前回（${shortDate(S.lastResult.date)}）：${esc(S.lastResult.msg)}</p>` : "";
     const hist = historyBlock(S.history || [], "me");
     return `${nest()}${last}
+      ${hrsNeedsRemind() ? hrsCard() : ""}
       <section class="card"><h2>人たらし力の課題</h2>${task}</section>
       <section class="card counter-card"><h2><span class="orn">❖</span>点数カウンター<span class="orn">❖</span></h2><div class="counter" id="counter">${counterHTML(sc)}</div>
         <p class="sub">やった回数は、数字の欄をタップして直接入力するか（0.5のような数字も入れられます）、＋−で変えます。日付が変わると、その日の点数でドラゴンが育ちます。</p>
         <div class="items">${items}</div></section>
+      ${hrsNeedsRemind() ? "" : hrsCard()}
       ${tasksCard()}
       ${goalsCard()}
       ${hist ? `<section class="card"><h2>${histOpen.has("me") ? "これまでの点数" : "最近の点数"}</h2>${hist}</section>` : ""}`;
@@ -992,7 +1094,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/10-9</p>
+        <p class="sub">バージョン：11/11-1</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
@@ -1040,6 +1142,48 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <section class="card"><h2>ドラゴン図鑑 <small class="count">${list.length}ひき</small></h2>
         <div class="tally">${STAGES.map((n, k) => `<span>${n} <b>${counts[k]}</b></span>`).join("")}</div>
         ${list.length ? `<div class="book">${book}</div>` : `<p class="sub">まだ誰もドラゴンを持っていません。</p>`}</section>`;
+  }
+
+  let hrsDate = null;
+  // all reports for one staff record: closed days from history, plus today's (or a day not closed yet)
+  function hrsList(d) {
+    const out = [];
+    for (const h of d.history || []) if (h.hrs) out.push({ date: h.date, h: h.hrs });
+    if (d.today && d.today.hrs && !out.some(x => x.date === d.today.date)) out.push({ date: d.today.date, h: d.today.hrs });
+    return out;
+  }
+  const hrsOpenImportant = () => staffList.reduce((n, d) => n + hrsList(d).filter(x => x.h.important && !hrsReviewOf(d, x.date)).length, 0);
+  function hrsAdminCard() {
+    const t = todayStr();
+    const all = staffList.flatMap(d => hrsList(d).map(x => ({ d, ...x })));
+    const dates = [...new Set([t, ...all.map(x => x.date)])].sort().reverse().slice(0, 30);
+    const sel = hrsDate && dates.includes(hrsDate) ? hrsDate : t;
+    const rows = all.filter(x => x.date === sel).sort((a, b) => (b.h.important && !hrsReviewOf(b.d, b.date) ? 1 : 0) - (a.h.important && !hrsReviewOf(a.d, a.date) ? 1 : 0) || String(a.h.at).localeCompare(String(b.h.at)));
+    const worked = d => sel === t ? !!(d.today && d.today.date === t && (d.today.checkedIn || dayScore(d) > 0)) : records(d).some(r => r.date === sel);
+    const missing = staffList.filter(d => worked(d) && !rows.some(r => r.d.id === d.id));
+    const open = staffList.reduce((n, d) => n + hrsList(d).filter(x => x.h.important && !hrsReviewOf(d, x.date) && x.date !== sel).length, 0);
+    const items = rows.map(({ d, date, h }) => {
+      const rv = hrsReviewOf(d, date), auto = hrsAuto(h), p = rv && rv.pts ? rv.pts : auto, key = esc(d.id) + "|" + date;
+      const sel3 = (k, max) => `<select id="hrs-rv-${k}-${esc(d.id)}" aria-label="${k}">${Array.from({ length: max + 1 }, (_, i) => `<option${i === Number(p[k]) ? " selected" : ""}>${i}</option>`).join("")}</select>`;
+      const lines = (h.kind === "none" ? [["気づき", h.why], ["次にやること", h.act]] : [["起きたこと", h.what], ["原因", h.unknown ? "わからない（不明）" : h.why], ["どうする", h.act]])
+        .filter(x => hlen(x[1])).map(([k, v]) => `<div class="hrs-line"><b>${k}</b>${esc(v)}</div>`).join("");
+      return `<details class="staff-d"${h.important && !rv ? " open" : ""}><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d")}
+        <div class="nm">${esc(d.name)}<small>${h.at ? new Date(h.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + " 報告" : ""}${h.editedAt ? "（書き直しあり）" : ""}</small>
+        <div><span class="hrs-tag ${h.kind === "none" ? "none" : "issue"}">${h.kind === "none" ? "問題なし" : "問題・相談あり"}</span> ${h.important ? `<span class="hrs-tag imp">重要・相談したい</span>` : ""}</div></div>
+        <span class="pill ${rv ? "good" : "warn"}">${hrsSum(p)}</span></div></summary>
+        <div class="staff-detail">${lines || `<p class="sub">「問題なし」だけの報告です。</p>`}
+          <div><b>点数</b> ${rv ? `<span class="hrs-tag ok">確認済み</span>` : `<span class="hrs-tag">仮の点数（自動）</span>`}</div>
+          <div class="hrs-rv"><label>正確な報告（3）${sel3("info", 3)}</label><label>原因を考えた（3）${sel3("cause", 3)}</label><label>行動・相談（4）${sel3("act", 4)}</label></div>
+          <textarea id="hrs-rv-c-${esc(d.id)}" placeholder="コメント（本人の画面に出ます）" maxlength="300">${esc(rv && rv.comment || "")}</textarea>
+          <button class="mini" data-hrsrv="${key}">${rv ? "修正して保存" : "確認して保存"}</button></div></details>`;
+    }).join("");
+    return `<section class="card"><h2>報連相</h2>
+      <p class="sub">点数は書いた内容から自動で仮につけています。名前をタップして、点数の確認・修正とコメントができます。</p>
+      <select id="hrs-adate" aria-label="報連相の日">${dates.map(x => `<option value="${x}"${x === sel ? " selected" : ""}>${fullDate(x)}${x === t ? "・今日" : ""}</option>`).join("")}</select>
+      <div class="ann-sum"><span>報告 <b>${rows.length}</b>人</span><span>未報告 <b>${missing.length}</b>人</span><span>相談あり <b>${rows.filter(r => r.h.important).length}</b>件</span></div>
+      ${open ? `<p class="hrs-remind-msg">ほかの日に、まだ確認していない「重要・相談したい」が ${open}件あります。</p>` : ""}
+      ${missing.length ? `<div><b>未報告</b>${sel === t ? "（出勤した人）" : ""}</div><div class="hrs-miss">${missing.map(d => `<span>${esc(d.name)}</span>`).join("")}</div>` : ""}
+      <div class="staff">${items || `<p class="sub">この日の報告はまだありません。</p>`}</div></section>`;
   }
 
   function viewAdmin() {
@@ -1101,7 +1245,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <input type="text" id="give-text" placeholder="例：棚の商品を10点撮影" maxlength="60" aria-label="渡すタスク">
       <div class="addline"><label class="ptlabel">できたら <input type="number" id="give-pt" inputmode="numeric" min="0" max="100" value="10" aria-label="できたらもらえる点数"> 点</label><button class="mini" id="give-go">渡す</button></div>
       ${openAll.length ? `<div><b>渡したタスク</b></div>${openAll.map(({ d, g }) => `<div class="given-row"><span><b>${esc(d.name)}</b>　${esc(g.text)}${Number(g.pt) > 0 ? `（${g.pt}点）` : ""}</span><span class="st ${d.givenDone && d.givenDone[g.id] ? "ok" : ""}">${d.givenDone && d.givenDone[g.id] ? "完了" : "まだ"}</span><button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}` : ""}</section>` : "";
-    return annCard + `<section class="card"><h2>みんなの今日</h2>
+    return annCard + hrsAdminCard() + `<section class="card"><h2>みんなの今日</h2>
       ${staffList.length ? `<div class="row"><div class="item" style="display:block"><small style="color:var(--muted)">出勤</small><div style="font-family:var(--font-num);font-size:24px">${todays.length} / ${staffList.length}人</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">平均</small><div style="font-family:var(--font-num);font-size:24px">${avg}点</div></div>
       <div class="item" style="display:block"><small style="color:var(--muted)">100点</small><div style="font-family:var(--font-num);font-size:24px">${hit}人</div></div></div>
@@ -1134,7 +1278,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (!S) tabs.splice(0, 3, ["today", "登録", tabs[0][2]]);
     if (isOwner) tabs.push(["admin", "管理者", '<circle cx="9" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 20c0-3.5 3-5.5 6-5.5s6 2 6 5.5M16 6.5a3 3 0 0 1 0 6M18 14.5c2 .6 3 2.5 3 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>']);
     $("#tabs").style.gridTemplateColumns = `repeat(${tabs.length}, 1fr)`;
-    $("#tabs").innerHTML = tabs.map(([k, l, ic]) => `<button data-tab="${k}" ${tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("");
+    const imp = isOwner && staffLoaded ? hrsOpenImportant() : 0;
+    $("#tabs").innerHTML = tabs.map(([k, l, ic]) => `<button data-tab="${k}" ${tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}${k === "admin" && imp ? `<span class="tab-badge" aria-label="未確認の相談${imp}件">${imp}</span>` : ""}</button>`).join("");
     growFx = false;
     liveBar();
     syncBgm();
@@ -1163,6 +1308,39 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (d.histclose) { histOpen.delete(d.histclose); render(); return; }
     if (d.peek) { const g = dragons.find(x => x.id === d.peek); if (g) toast(`${g.id === uid ? "あなた" : (g.name || "だれか") + "さん"}のドラゴン「${g.dragonName || STAGES[g.stage || 0]}」・${STAGES[g.stage || 0]}`); return; }
     if (b.id === "login") { login(); return; }
+    if (d.hrsrv) {
+      const [sid, date] = d.hrsrv.split("|"), st = staffList.find(x => x.id === sid);
+      if (!st) return;
+      const v = k => Number(($("#hrs-rv-" + k + "-" + sid) || {}).value) || 0;
+      const rv = { pts: { info: v("info"), cause: v("cause"), act: v("act") }, comment: (($("#hrs-rv-c-" + sid) || {}).value || "").trim().slice(0, 300), at: new Date().toISOString(), by: (authUser && authUser.email) || "" };
+      const keepFrom = (() => { const x = new Date(); x.setDate(x.getDate() - 60); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; })();
+      const next = Object.fromEntries(Object.entries({ ...(st.hrsReview || {}), [date]: rv }).filter(([k]) => k >= keepFrom));
+      try { await db.doc("staff/" + sid).update({ hrsReview: next }); st.hrsReview = next; if (sid === uid && S) S.hrsReview = structuredClone(next); toast("保存しました"); render(); }
+      catch (err) { toast("保存できませんでした"); }
+      return;
+    }
+    if (b.id === "hrs-none") {
+      if (!S) return;
+      S.today.hrs = { kind: "none", at: new Date().toISOString() };
+      hrsEdit = false; render(); persist(); updateScore(false); toast("報告しました。おつかれさま！"); return;
+    }
+    if (b.id === "hrs-issue") { hrsStartEdit("issue"); render(); const x = $("#hrs-what"); x && x.focus(); return; }
+    if (b.id === "hrs-more" || b.id === "hrs-redo") { hrsStartEdit(); render(); return; }
+    if (b.id === "hrs-cancel") { hrsEdit = false; hrsDraft = null; render(); return; }
+    if (b.id === "hrs-unknown") { hrsDraft.unknown = !hrsDraft.unknown; render(); return; }
+    if (b.id === "hrs-send") {
+      const dr = hrsDraft;
+      if (dr.kind !== "none" && !hlen(dr.what)) { toast("①の「何が起きた？」を書いてください"); const x = $("#hrs-what"); x && x.focus(); return; }
+      const old = hrsToday(S);
+      const h = { kind: dr.kind, at: old && old.at || new Date().toISOString() };
+      if (old) h.editedAt = new Date().toISOString();
+      if (dr.kind !== "none" && hlen(dr.what)) h.what = dr.what.trim().slice(0, 500);
+      if (dr.unknown && dr.kind !== "none") h.unknown = true; else if (hlen(dr.why)) h.why = dr.why.trim().slice(0, 500);
+      if (hlen(dr.act)) h.act = dr.act.trim().slice(0, 500);
+      if (dr.important && dr.kind !== "none") h.important = true;
+      S.today.hrs = h; hrsEdit = false; hrsDraft = null;
+      render(); persist(); updateScore(false); toast(h.important ? "報告しました。管理者に知らせます" : "報告しました。おつかれさま！"); return;
+    }
     if (b.id === "bgm-toggle") { setBgm(!bgmOn()); render(); return; }
     if (b.id === "logout" || b.id === "logout2") { await flush(); await firebase.auth().signOut(); location.reload(); return; }
     if (b.id === "add-member") {
@@ -1231,6 +1409,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   });
 
   document.addEventListener("change", e => {
+    if (e.target.id === "hrs-imp" && hrsDraft) { hrsDraft.important = e.target.checked; return; }
+    if (e.target.id === "hrs-adate") { hrsDate = e.target.value; render(); return; }
     if (e.target.id === "set-bgm") { setBgm(e.target.checked); return; }
     if (e.target.id === "set-sfx") { try { localStorage.setItem("skiru-sfx", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) playSfx("100"); return; }
     if (e.target.id === "ann-date") { annDate = e.target.value; render(); return; }
@@ -1251,6 +1431,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (t.dataset.val) { const it = S.items.find(x => x.id == t.dataset.val); it.val = Math.max(0, Math.round((Number(t.value) || 0) * 100) / 100); liveTotals(it); persist(); }
     else if (t.dataset.rate) { S.ratings[t.dataset.rate] = Number(t.value); t.nextElementSibling.textContent = t.value; persist(); }
     else if (t.id === "note") { S.today.reflect.note = t.value; persist(); }
+    else if (hrsDraft && t.id === "hrs-what") hrsDraft.what = t.value;
+    else if (hrsDraft && t.id === "hrs-why") hrsDraft.why = t.value;
+    else if (hrsDraft && t.id === "hrs-act") hrsDraft.act = t.value;
   });
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter" || e.isComposing) return;
@@ -1329,17 +1512,17 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
             adopt(d);
             if (rollover()) persist();
             const f = document.activeElement && document.activeElement.id;
-            if (tab !== "admin" && !(f && (f === "new-task" || f === "new-goal" || f === "note" || f.startsWith("val-") || f.startsWith("name-") || f.startsWith("pt-")))) render();
+            if (tab !== "admin" && !(f && (f === "new-task" || f === "new-goal" || f === "note" || f.startsWith("hrs-") || f.startsWith("val-") || f.startsWith("name-") || f.startsWith("pt-")))) render();
             return;
           }
         }
         // later snapshots: take the owner's assignment, keep local edits
         if (snap.exists && S) {
-          const a = snap.data().assigned, gt = snap.data().givenTasks;
-          if (JSON.stringify(a) !== JSON.stringify(S.assigned) || JSON.stringify(gt) !== JSON.stringify(S.givenTasks)) {
-            S.assigned = a ? structuredClone(a) : undefined; S.givenTasks = gt ? structuredClone(gt) : [];
+          const a = snap.data().assigned, gt = snap.data().givenTasks, hr = snap.data().hrsReview;
+          if (JSON.stringify(a) !== JSON.stringify(S.assigned) || JSON.stringify(gt) !== JSON.stringify(S.givenTasks) || JSON.stringify(hr) !== JSON.stringify(S.hrsReview)) {
+            S.assigned = a ? structuredClone(a) : undefined; S.givenTasks = gt ? structuredClone(gt) : []; S.hrsReview = hr ? structuredClone(hr) : undefined;
             const f = document.activeElement && document.activeElement.id;
-            if (tab !== "admin" && f !== "new-task" && f !== "new-goal" && f !== "note") render();
+            if (tab !== "admin" && f !== "new-task" && f !== "new-goal" && f !== "note" && !(f && f.startsWith("hrs-"))) render();
           }
         }
       }, err => { clearTimeout(timer); banner = "データを読みこめませんでした。ページを開き直してください。"; render(); });
@@ -1356,7 +1539,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
           if (tab === "admin") {
             const open = [...document.querySelectorAll("details.staff-d")].map((x, i) => x.open ? i : -1).filter(i => i >= 0);
             const focused = document.activeElement && document.activeElement.id;
-            if (focused && (focused.startsWith("as-") || focused.startsWith("gv-"))) return;
+            if (focused && (focused.startsWith("as-") || focused.startsWith("gv-") || focused.startsWith("hrs-rv"))) return;
             render();
             const ds = document.querySelectorAll("details.staff-d"); open.forEach(i => ds[i] && (ds[i].open = true));
           }

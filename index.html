@@ -366,6 +366,13 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 .counter-card h2 .orn { font-size: 14px; align-self: center; }
 .counter-card .sub { color: #bfa77a; }
 .counter-card .item { background: linear-gradient(180deg, rgba(255, 230, 170, .07), rgba(0, 0, 0, .25)); border: 1px solid rgba(200, 154, 74, .45); box-shadow: inset 0 1px 0 rgba(255,230,170,.08); }
+.genre-h { display: flex; justify-content: space-between; align-items: baseline; margin: 10px 2px 2px; font-weight: 800; font-size: 15px; }
+.genre-h b { font-size: 13px; font-weight: 700; }
+.counter-card .genre-h { color: #f1dca8; border-bottom: 1px solid rgba(200, 154, 74, .45); padding-bottom: 4px; }
+.counter-card .genre-h b { color: #e8c77a; }
+.genre-sel { grid-column: 2 / -1; font-size: 13px; padding: 6px 8px; }
+.genre-list { display: grid; gap: 6px; }
+.genre-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
 .counter-card .item .label { color: #f1dca8; } .counter-card .item .label small { color: #bfa77a; }
 .counter-card .verdict { font-family: "Shippori Mincho", serif; font-weight: 800; letter-spacing: .04em; }
 .counter-card .verdict.good { color: #9fd6a0; } .counter-card .verdict.warn { color: #f0c46a; } .counter-card .verdict.bad { color: #ff9a80; }
@@ -1059,12 +1066,27 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${more}</div></section>`;
   }
 
+  // score genres (only for admins): items can be grouped under these headings
+  const DEFAULT_GENRES = ["実務", "スタッフ管理", "成果", "未来や仕組み"];
+  const useGenres = () => !!(isOwner && S);
+  const genresOf = d => (d && d.genres && d.genres.length ? d.genres : DEFAULT_GENRES);
+  function groupItems(items, genres) {
+    const groups = genres.map(g => ({ g, list: items.filter(it => it.genre === g) }));
+    const rest = items.filter(it => !genres.includes(it.genre));
+    if (rest.length) groups.push({ g: "未分類", list: rest });
+    return groups.filter(x => x.list.length);
+  }
+  const gsum = list => r1(list.reduce((a, it) => a + (Number(it.pt) || 0) * (Number(it.val) || 0), 0));
+
   function viewToday() {
     const sc = dayScore(S);
-    const items = S.items.map(it => `<div class="item"><div class="label">${esc(it.name)}<small>${it.pt}点 × <span id="cnt-${it.id}">${it.val}</span>回 = <b id="sub-${it.id}">${r1(it.pt * it.val)}点</b></small></div>
+    const itemRow = it => `<div class="item"><div class="label">${esc(it.name)}<small>${it.pt}点 × <span id="cnt-${it.id}">${it.val}</span>回 = <b id="sub-${it.id}">${r1(it.pt * it.val)}点</b></small></div>
       <div class="stepper"><button class="mini" data-dec="${it.id}" aria-label="${esc(it.name)}を1回へらす">−</button>
       <input type="number" inputmode="decimal" min="0" step="any" value="${it.val}" id="val-${it.id}" data-val="${it.id}" aria-label="${esc(it.name)}の回数">
-      <button class="mini" data-inc="${it.id}" aria-label="${esc(it.name)}を1回ふやす">＋</button></div></div>`).join("");
+      <button class="mini" data-inc="${it.id}" aria-label="${esc(it.name)}を1回ふやす">＋</button></div></div>`;
+    const items = useGenres()
+      ? groupItems(S.items, genresOf(S)).map((x, gi) => `<div class="genre-h"><span>■ ${esc(x.g)}</span><b>小計 <span id="gsub-${gi}" data-gname="${esc(x.g)}">${gsum(x.list)}</span>点</b></div>${x.list.map(itemRow).join("")}`).join("")
+      : S.items.map(itemRow).join("");
     const tk = currentTask();
     const task = S.today.checkedIn && tk
       ? `<div class="task"><span class="el">今日の課題 ・ ${tk.el === "assigned" ? "シンプーさんから" : ELS[tk.el]}</span><p>${esc(tk.text)}</p></div><p class="sub">夜に「ふりかえり」でできたかを記録してください。</p>`
@@ -1087,14 +1109,20 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const last = S.items.length - 1;
     const rows = S.items.map((it, i) => `<div class="edit-row"><div class="move"><button class="mini" data-up="${it.id}" aria-label="${esc(it.name)}を上へ"${i === 0 ? " disabled" : ""}>▲</button><button class="mini" data-down="${it.id}" aria-label="${esc(it.name)}を下へ"${i === last ? " disabled" : ""}>▼</button></div><input type="text" id="name-${it.id}" data-name="${it.id}" value="${esc(it.name)}" aria-label="項目名">
       <input type="number" id="pt-${it.id}" data-ptin="${it.id}" min="1" max="100" value="${it.pt}" aria-label="1回の点数">
-      <button class="mini" data-del="${it.id}" aria-label="${esc(it.name)}を消す">消す</button></div>`).join("");
+      <button class="mini" data-del="${it.id}" aria-label="${esc(it.name)}を消す">消す</button>
+      ${useGenres() ? `<select class="genre-sel" data-genre="${it.id}" aria-label="${esc(it.name)}のジャンル"><option value="">ジャンル：未分類</option>${genresOf(S).map(g => `<option value="${esc(g)}"${it.genre === g ? " selected" : ""}>ジャンル：${esc(g)}</option>`).join("")}</select>` : ""}</div>`).join("");
+    const genreCard = useGenres() ? `<section class="card"><h2>ジャンル <small class="count">管理者だけ</small></h2>
+      <p class="sub">点数項目をジャンルに分けると、「きょう」の点数カウンターでジャンルごとの小計が出ます。名前は書きかえられます。</p>
+      <div class="genre-list">${genresOf(S).map((g, i) => `<div class="genre-row"><input type="text" id="gname-${i}" data-grename="${i}" value="${esc(g)}" maxlength="20" aria-label="ジャンル名"><button class="mini" data-gdelete="${i}">消す</button></div>`).join("")}</div>
+      <div class="addline"><input type="text" id="new-genre" placeholder="新しいジャンル" maxlength="20"><button class="mini" id="add-genre">追加</button></div></section>` : "";
     return `<section class="card"><h2>点数項目</h2><p class="sub">自分の仕事に合わせて、項目と「1回あたりの点数」を決めます。例：出品1件で5点なら、23件で115点です。シンプーさんはこの内容を確認できます。</p>
       <p class="sub">▲▼で順番を入れかえられます。よく使う項目を上にすると「きょう」の画面でも上に出ます。</p>
       <div class="edit-row" style="font-size:12px;color:var(--muted)"><span>順番</span><span>項目</span><span>1回の点数</span><span></span></div>${rows}
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
+      ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/12-1</p>
+        <p class="sub">バージョン：11/12-2</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
@@ -1195,7 +1223,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       const tk = d.assigned && d.assigned.date === t && d.assigned.text ? d.assigned.text : (isToday && d.today.task ? d.today.task.text : "");
       const res = isToday && d.today.reflect && d.today.reflect.result ? RES[d.today.reflect.result] : "まだ";
       const status = !isToday || !d.today.checkedIn ? "未出勤" : `課題${res}`;
-      const items = (d.items || []).map(it => `<div class="kv"><span>${esc(it.name)}（${it.pt}点）</span><span>${isToday ? it.val : 0}回 = ${isToday ? r1(it.pt * it.val) : 0}点</span></div>`).join("");
+      const items = (d.items || []).map(it => `<div class="kv"><span>${it.genre ? `［${esc(it.genre)}］` : ""}${esc(it.name)}（${it.pt}点）</span><span>${isToday ? it.val : 0}回 = ${isToday ? r1(it.pt * it.val) : 0}点</span></div>`).join("");
       const hist = historyBlock(records(d).filter(h => !h.live), d.id);
       const rt = d.ratings || {};
       return `<details class="staff-d"${histOpen.has(d.id) ? " open" : ""}><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", d.streak || 0)}
@@ -1296,6 +1324,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   function liveTotals(it) {
     $("#cnt-" + it.id).textContent = it.val;
     $("#sub-" + it.id).textContent = r1(it.pt * it.val) + "点";
+    if (useGenres()) { const gs = genresOf(S); document.querySelectorAll("[data-gname]").forEach(el => { const g = el.dataset.gname; el.textContent = gsum(S.items.filter(x => g === "未分類" ? !gs.includes(x.genre) : x.genre === g)); }); }
     updateScore();
   }
 
@@ -1403,6 +1432,15 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       return;
     }
     if (d.del) { S.items = S.items.filter(x => x.id != d.del); render(); persist(); return; }
+    if (d.gdelete !== undefined) {
+      const gs = [...genresOf(S)], g = gs[Number(d.gdelete)]; gs.splice(Number(d.gdelete), 1); S.genres = gs;
+      S.items.forEach(it => { if (it.genre === g) delete it.genre; }); render(); persist(); toast("ジャンルを消しました（項目は未分類になります）"); return;
+    }
+    if (b.id === "add-genre") {
+      const v = ($("#new-genre").value || "").trim().slice(0, 20); if (!v) return;
+      const gs = [...genresOf(S)]; if (gs.includes(v)) { toast("同じ名前のジャンルがあります"); return; }
+      S.genres = [...gs, v]; render(); persist(); return;
+    }
     if (b.id === "additem") { const id = Math.max(Date.now(), ...S.items.map(x => x.id + 1)); S.items.push({ id, name: "新しい項目", pt: 5, val: 0 }); render(); persist(); $("#name-" + id).focus(); return; }
     if (d.color) { S.color = d.color; render(); persist(); toast("ドラゴンの色を変えました"); return; }
     if (d.res) { S.today.reflect.result = d.res; render(); persist(); return; }
@@ -1419,6 +1457,12 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (d.tdone) { const x = S.tasks.find(y => y.id === d.tdone); x.done = t.checked; render(); persist(); if (t.checked) toast("おつかれさま！"); return; }
     if (d.gdone) { S.givenDone = { ...(S.givenDone || {}) }; if (t.checked) S.givenDone[d.gdone] = todayStr(); else delete S.givenDone[d.gdone]; render(); persist(); updateScore(false); if (t.checked) toast("おつかれさま！"); return; }
     if (d.goaldone) { const g = S.goals.find(y => y.id === d.goaldone); g.done = t.checked; render(); persist(); if (t.checked) toast("目標達成！"); return; }
+    if (d.genre !== undefined && t.classList.contains("genre-sel")) { const it = S.items.find(x => x.id == d.genre); if (t.value) it.genre = t.value; else delete it.genre; render(); persist(); return; }
+    if (d.grename !== undefined) {
+      const gs = [...genresOf(S)], i = Number(d.grename), old = gs[i], v = t.value.trim().slice(0, 20);
+      if (!v || (v !== old && gs.includes(v))) { render(); return; }
+      gs[i] = v; S.genres = gs; S.items.forEach(it => { if (it.genre === old) it.genre = v; }); render(); persist(); return;
+    }
     if (d.name) { S.items.find(x => x.id == d.name).name = t.value.trim() || "項目"; render(); persist(); }
     else if (d.ptin) { const it = S.items.find(x => x.id == d.ptin); it.pt = Math.max(1, Math.min(100, Number(t.value) || 1)); render(); persist(); }
     else if (t.id === "set-name") { S.name = t.value.trim() || S.name; render(); persist(); }
@@ -1437,7 +1481,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   });
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter" || e.isComposing) return;
-    const map = { "new-task": "#add-task", "new-goal": "#add-goal", "new-member": "#add-member" };
+    const map = { "new-task": "#add-task", "new-goal": "#add-goal", "new-member": "#add-member", "new-genre": "#add-genre" };
     if (map[e.target.id]) { e.preventDefault(); $(map[e.target.id]).click(); }
     else if (e.target.id && e.target.id.startsWith("gv-")) { e.preventDefault(); $(`[data-give="${e.target.id.slice(3)}"]`).click(); }
   });

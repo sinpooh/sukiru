@@ -181,7 +181,7 @@ textarea { min-height: 70px; resize: vertical; }
 .sum b { font-family: var(--font-num); font-weight: 400; font-size: 17px; color: var(--fg); }
 .sum.off b { color: var(--bad); }
 
-.colors { display: flex; flex-wrap: wrap; gap: 10px; }
+.colors { display: grid; grid-template-columns: repeat(5, 36px); gap: 12px; }
 .colors button { width: 36px; height: 36px; border-radius: 50%; padding: 0; border: 3px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
 .colors button[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--fg); }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -456,7 +456,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 (() => {
   const STAGES = ["たまご", "ヒナ", "こども", "成竜"];
   const GROW_DAYS = 3;
-  const COLORS = ["#3fa36b", "#d9642a", "#3b7dd8", "#c4479a", "#7b5cd6", "#d4a417", "#2aa6a6", "#c8443c", "#5f7d2e", "#8a6a4f"];
+  const COLORS = ["#3fa36b", "#d9642a", "#3b7dd8", "#c4479a", "#7b5cd6", "#d4a417", "#2aa6a6", "#c8443c", "#5f7d2e", "#8a6a4f", "#4fb0e0", "#e87a95", "#8dbf3a", "#4d5560", "#233a73"];
   const JOBS = ["接客", "ネット出品", "梱包", "メンテナンス", "営業", "中間管理職", "経営者"];
   const ELS = { sunao: "素直さ", kyomi: "相手への興味", hyogen: "表現力" };
   const JOB_ITEMS = {
@@ -763,7 +763,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         <path d="M81 121 v5 M87 121 v5 M109 121 v5 M115 121 v5" stroke="#5a2d12" stroke-width="2" stroke-linecap="round"/>`;
     } else if (stage === 2) {
       // the child is a picture (シンプーさん's design), with the body painted in each staff color
-      const known = ["3fa36b", "d9642a", "3b7dd8", "c4479a", "7b5cd6", "d4a417", "2aa6a6", "c8443c", "5f7d2e", "8a6a4f"];
+      const known = ["3fa36b", "d9642a", "3b7dd8", "c4479a", "7b5cd6", "d4a417", "2aa6a6", "c8443c", "5f7d2e", "8a6a4f", "4fb0e0", "e87a95", "8dbf3a", "4d5560", "233a73"];
       const hex = String(color || "").replace("#", "").toLowerCase();
       const src = known.includes(hex) ? `img/kid-${hex}.webp` : "img/kid-base.webp";
       return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><image href="${src}" x="22" y="0" width="156" height="200" preserveAspectRatio="xMidYMid meet"/></g></svg>`;
@@ -1094,7 +1094,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="ghost" id="additem">＋ 項目を足す</button></section>
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/11-1</p>
+        <p class="sub">バージョン：11/12-1</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>

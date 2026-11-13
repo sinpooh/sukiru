@@ -1122,7 +1122,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/12-2</p>
+        <p class="sub">バージョン：11/13-1</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>

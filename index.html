@@ -241,6 +241,12 @@ details.staff-d .staff-row { background: transparent; }
 .roam .tag { font-size: 10px; font-weight: 700; background: rgba(255,255,255,.85); color: #333; border-radius: 99px; padding: 1px 7px; white-space: nowrap; margin-top: -4px; }
 .roam.me .tag { background: var(--accent); color: #fff; }
 @keyframes roambob { 0%,100% { transform: translate(-50%, -85%); } 50% { transform: translate(-50%, -92%); } }
+.kid-wing { transform-box: view-box; animation: kidFlap 1.3s ease-in-out infinite; }
+.kid-wl { transform-origin: 68px 97px; }
+.kid-wr { transform-origin: 125px 97px; animation-name: kidFlapR; }
+@keyframes kidFlap { 0%, 50%, 100% { transform: rotate(0deg); } 20% { transform: rotate(18deg); } 35% { transform: rotate(-6deg); } }
+@keyframes kidFlapR { 0%, 50%, 100% { transform: rotate(0deg); } 20% { transform: rotate(-18deg); } 35% { transform: rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) { .kid-wing { animation: none; } }
 /* the child dragon on the field: hop, squash on landing, then a silly wiggle */
 .roam.st2 .roam-d .dragon-body { transform-box: view-box; transform-origin: 100px 196px; animation: kidHop 2.6s cubic-bezier(.3,.7,.4,1) infinite; animation-delay: var(--delay, 0s); }
 @keyframes kidHop {
@@ -796,7 +802,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       const known = ["3fa36b", "d9642a", "3b7dd8", "c4479a", "7b5cd6", "d4a417", "2aa6a6", "c8443c", "5f7d2e", "8a6a4f", "4fb0e0", "e87a95", "8dbf3a", "4d5560", "233a73"];
       const hex = String(color || "").replace("#", "").toLowerCase();
       const src = known.includes(hex) ? `img/kid-${hex}.webp` : "img/kid-base.webp";
-      return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><image href="${src}" x="22" y="0" width="156" height="200" preserveAspectRatio="xMidYMid meet"/></g></svg>`;
+      const im = h => `<image href="${h}" x="22" y="0" width="156" height="200" preserveAspectRatio="xMidYMid meet"/>`;
+      // the wings are separate pictures behind the body so they can flap
+      return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><g class="kid-wing kid-wl">${im("img/wingL.webp")}</g><g class="kid-wing kid-wr">${im("img/wingR.webp")}</g>${im(src)}</g></svg>`;
     } else {
       g = `<path d="M70 112 q-60 -40 -58 -88 q16 30 34 30 q-4 -18 6 -30 q10 34 40 56z M130 112 q60 -40 58 -88 q-16 30 -34 30 q4 -18 -6 -30 q-10 34 -40 56z" fill="${dark}"/>
         <path d="M132 162 q48 10 52 -30 q4 10 -2 22 l10 -2 q-16 34 -60 22" fill="${color}"/>
@@ -1159,7 +1167,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/15-4</p>
+        <p class="sub">バージョン：11/15-5</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>

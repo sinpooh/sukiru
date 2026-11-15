@@ -462,7 +462,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 <script>
 (() => {
   const STAGES = ["たまご", "ヒナ", "こども", "成竜"];
-  const GROW_DAYS = 3;
+  // straight 100-point days needed to move up from each stage: egg→hatchling 3, hatchling→child 3, child→adult 5
+  const GROW_NEED = [3, 3, 5];
+  const growDays = st => GROW_NEED[st] || 3;
   const COLORS = ["#3fa36b", "#d9642a", "#3b7dd8", "#c4479a", "#7b5cd6", "#d4a417", "#2aa6a6", "#c8443c", "#5f7d2e", "#8a6a4f", "#4fb0e0", "#e87a95", "#8dbf3a", "#4d5560", "#233a73"];
   const JOBS = ["接客", "ネット出品", "梱包", "メンテナンス", "営業", "中間管理職", "経営者"];
   const ELS = { sunao: "素直さ", kyomi: "相手への興味", hyogen: "表現力" };
@@ -590,7 +592,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (!S) return;
     if (pendingEvo) { const e = pendingEvo; pendingEvo = null; setTimeout(() => evolve(e.from, e.to, e.sc), 400); return; }
     const sc = dayScore(S);
-    if (S.today && S.today.date === todayStr() && sc >= 100 && !S.today.evolved && S.stage < 3 && (S.streak || 0) + 1 >= GROW_DAYS) {
+    if (S.today && S.today.date === todayStr() && sc >= 100 && !S.today.evolved && S.stage < 3 && (S.streak || 0) + 1 >= growDays(S.stage)) {
       const from = S.stage; S.stage++; S.streak = 0; S.today.evolved = true; S.today.celebrated = true;
       S.lastResult = { date: S.today.date, msg: `進化！ ${STAGES[S.stage]}になりました` };
       persist(); setTimeout(() => evolve(from, S.stage, sc), 400);
@@ -622,7 +624,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       if (S.today.evolved) msg = `${sc}点。この日に${STAGES[S.stage]}に進化しました`;
       else if (sc >= 100) {
         S.streak++;
-        if (S.stage < 3 && S.streak >= GROW_DAYS) { pendingEvo = { from: S.stage, to: S.stage + 1, sc }; S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${STAGES[S.stage]}になりました`; }
+        if (S.stage < 3 && S.streak >= growDays(S.stage)) { pendingEvo = { from: S.stage, to: S.stage + 1, sc }; S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${STAGES[S.stage]}になりました`; }
         else msg = `100点達成！ 連続${S.streak}日目`;
       } else if (sc <= 80) {
         const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0;
@@ -852,7 +854,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   ];
   function celebrate(sc) {
     S.today.celebrated = true;
-    if (S.stage < 3 && (S.streak || 0) + 1 >= GROW_DAYS && !S.today.evolved) {
+    if (S.stage < 3 && (S.streak || 0) + 1 >= growDays(S.stage) && !S.today.evolved) {
       const from = S.stage; S.stage++; S.streak = 0; S.today.evolved = true;
       S.lastResult = { date: S.today.date, msg: `進化！ ${STAGES[S.stage]}になりました` };
       persist(); evolve(from, S.stage, sc); return;
@@ -933,7 +935,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     el.className = "celebrate evolve" + (egg ? " hatch" : "");
     el.innerHTML = `<div class="confetti">${bits}</div><div class="cele-card" role="alert"><div class="cele-glow"></div><div class="evo-flash"></div>
       <div class="evo-stage">${stageOld}<div class="evo-new">${neu}</div></div>
-      <div class="cele-title evo-t">${title}</div><div class="cele-sub evo-t">3日連続100点達成！ ${sub}</div><div class="cele-score evo-t">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
+      <div class="cele-title evo-t">${title}</div><div class="cele-sub evo-t">${growDays(from)}日連続100点達成！ ${sub}</div><div class="cele-score evo-t">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
     el.hidden = false;
     playSfx("evo");
     try { navigator.vibrate && navigator.vibrate([40, 60, 40, 60, 40, 200, 300]); } catch (e) {}
@@ -954,7 +956,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 
   function nest() {
     const bars = STAGES.map((_, i) => `<i class="${i <= S.stage ? "on" : ""}"></i>`).join("");
-    const next = S.stage < 3 ? `次の進化まで 100点を あと<b>${GROW_DAYS - S.streak}</b>日` : `最終形態！ 100点連続 <b>${S.streak}</b>日`;
+    const next = S.stage < 3 ? `次の進化まで 100点を あと<b>${growDays(S.stage) - S.streak}</b>日` : `最終形態！ 100点連続 <b>${S.streak}</b>日`;
     return `<section class="nest" style="--dc:${S.color}"><div class="nest-light"></div><div class="nest-dragon ${growFx ? "grow-fx" : ""}">${dragonSVG(S.stage, S.color, "dragon", S.streak)}</div><div class="pedestal"></div>
       <div class="stage-name">${S.dragonName ? esc(S.dragonName) : STAGES[S.stage]}</div>${S.dragonName ? `<div class="dragon-name">${STAGES[S.stage]}</div>` : ""}<div class="stages">${bars}</div><div class="streak">${next}</div></section>`;
   }
@@ -1122,7 +1124,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/13-2</p>
+        <p class="sub">バージョン：11/15-1</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>

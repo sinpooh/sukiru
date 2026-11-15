@@ -236,7 +236,7 @@ details.staff-d .staff-row { background: transparent; }
 .field { position: relative; aspect-ratio: 800 / 875; }
 .field .land { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .roam { position: absolute; transform: translate(-50%, -85%); background: none; border: 0; padding: 0; width: var(--w); display: flex; flex-direction: column; align-items: center; animation: roambob 2.6s ease-in-out infinite; animation-delay: var(--delay); }
-.roam svg { width: 100%; height: auto; filter: drop-shadow(0 2px 0 rgba(0,0,0,.08)); }
+.roam svg { overflow: visible; width: 100%; height: auto; filter: drop-shadow(0 2px 0 rgba(0,0,0,.08)); }
 .roam .shadow { position: absolute; bottom: 14px; width: 70%; height: 8px; border-radius: 50%; background: rgba(0,0,0,.15); }
 .roam .tag { font-size: 10px; font-weight: 700; background: rgba(255,255,255,.85); color: #333; border-radius: 99px; padding: 1px 7px; white-space: nowrap; margin-top: -4px; }
 .roam.me .tag { background: var(--accent); color: #fff; }
@@ -1159,7 +1159,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/15-3</p>
+        <p class="sub">バージョン：11/15-4</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>

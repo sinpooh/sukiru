@@ -463,6 +463,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 (() => {
   const STAGES = ["たまご", "ヒナ", "こども", "成竜", "専門進化"];
   const MAX_STAGE = STAGES.length - 1;
+  const stageName = (st, job) => st >= 4 ? `${job || "専門"}ドラゴン` : STAGES[st] || "";
   // straight 100-point days needed to move up from each stage: egg→hatchling 3, hatchling→child 3, child→adult 5, adult→specialist 10
   const GROW_NEED = [3, 3, 5, 10];
   const growDays = st => GROW_NEED[st] || 3;
@@ -595,7 +596,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const sc = dayScore(S);
     if (S.today && S.today.date === todayStr() && sc >= 100 && !S.today.evolved && S.stage < MAX_STAGE && (S.streak || 0) + 1 >= growDays(S.stage)) {
       const from = S.stage; S.stage++; S.streak = 0; S.today.evolved = true; S.today.celebrated = true;
-      S.lastResult = { date: S.today.date, msg: `進化！ ${STAGES[S.stage]}になりました` };
+      S.lastResult = { date: S.today.date, msg: `進化！ ${stageName(S.stage, S.job)}になりました` };
       persist(); setTimeout(() => evolve(from, S.stage, sc), 400);
     }
   }
@@ -625,7 +626,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       if (S.today.evolved) msg = `${sc}点。この日に${STAGES[S.stage]}に進化しました`;
       else if (sc >= 100) {
         S.streak++;
-        if (S.stage < MAX_STAGE && S.streak >= growDays(S.stage)) { pendingEvo = { from: S.stage, to: S.stage + 1, sc }; S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${STAGES[S.stage]}になりました`; }
+        if (S.stage < MAX_STAGE && S.streak >= growDays(S.stage)) { pendingEvo = { from: S.stage, to: S.stage + 1, sc }; S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${stageName(S.stage, S.job)}になりました`; }
         else msg = `100点達成！ 連続${S.streak}日目`;
       } else if (sc <= 80) {
         const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0;
@@ -862,7 +863,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     S.today.celebrated = true;
     if (S.stage < MAX_STAGE && (S.streak || 0) + 1 >= growDays(S.stage) && !S.today.evolved) {
       const from = S.stage; S.stage++; S.streak = 0; S.today.evolved = true;
-      S.lastResult = { date: S.today.date, msg: `進化！ ${STAGES[S.stage]}になりました` };
+      S.lastResult = { date: S.today.date, msg: `進化！ ${stageName(S.stage, S.job)}になりました` };
       persist(); evolve(from, S.stage, sc); return;
     }
     persist();
@@ -937,7 +938,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
           <svg class="crack" viewBox="0 0 200 200"><path d="M58 118 L72 108 L82 122 L96 104 L108 124 L122 106 L134 120 L144 112" fill="none" stroke="#3a2a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
       : `<div class="evo-old">${old}</div>`;
     const title = egg ? "たまごがわれた！" : "進化した！";
-    const sub = egg ? `${nm}が生まれたよ！ ヒナになりました` : to === 4 ? `${nm}が専門進化！ ${esc(S.job || "")}のドラゴンになりました！` : `${nm}が${STAGES[to]}になりました！`;
+    const sub = egg ? `${nm}が生まれたよ！ ヒナになりました` : to === 4 ? `${nm}が専門進化！ ${esc(stageName(4, S.job))}になりました！` : `${nm}が${STAGES[to]}になりました！`;
     el.className = "celebrate evolve" + (egg ? " hatch" : "");
     el.innerHTML = `<div class="confetti">${bits}</div><div class="cele-card" role="alert"><div class="cele-glow"></div><div class="evo-flash"></div>
       <div class="evo-stage">${stageOld}<div class="evo-new">${neu}</div></div>
@@ -964,7 +965,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const bars = STAGES.map((_, i) => `<i class="${i <= S.stage ? "on" : ""}"></i>`).join("");
     const next = S.stage < MAX_STAGE ? `次の進化まで 100点を あと<b>${growDays(S.stage) - S.streak}</b>日` : `最終形態！ 100点連続 <b>${S.streak}</b>日`;
     return `<section class="nest" style="--dc:${S.color}"><div class="nest-light"></div><div class="nest-dragon ${growFx ? "grow-fx" : ""}">${dragonSVG(S.stage, S.color, "dragon", S.streak, S.job)}</div><div class="pedestal"></div>
-      <div class="stage-name">${S.dragonName ? esc(S.dragonName) : STAGES[S.stage]}</div>${S.dragonName ? `<div class="dragon-name">${STAGES[S.stage]}</div>` : ""}<div class="stages">${bars}</div><div class="streak">${next}</div></section>`;
+      <div class="stage-name">${S.dragonName ? esc(S.dragonName) : stageName(S.stage, S.job)}</div>${S.dragonName ? `<div class="dragon-name">${stageName(S.stage, S.job)}</div>` : ""}<div class="stages">${bars}</div><div class="streak">${next}</div></section>`;
   }
 
   function currentTask() {
@@ -1162,15 +1163,15 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const field = placed.map(({ d, x, y }, i) => {
       const st = d.stage || 0, w = SIZE[st];
       return `<button class="roam ${d.id === uid ? "me" : ""}" data-peek="${esc(d.id)}" style="left:${x}%;top:${y}%;--w:${w}px;--delay:${(i * .37) % 2}s">
-        <span class="shadow"></span>${dragonSVG(st, d.color || COLORS[0], "roam-d", 0, d.job)}<span class="tag">${esc(d.dragonName || STAGES[st])}</span></button>`;
+        <span class="shadow"></span>${dragonSVG(st, d.color || COLORS[0], "roam-d", 0, d.job)}<span class="tag">${esc(d.dragonName || stageName(st, d.job))}</span></button>`;
     }).join("");
     const counts = STAGES.map(() => 0); list.forEach(d => counts[d.stage || 0]++);
     const book = list.map(d => {
       const st = d.stage || 0;
       const steps = STAGES.map((n, k) => `<i class="${k <= st ? "on" : ""}" title="${n}"></i>`).join("");
       return `<div class="bcard ${d.id === uid ? "me" : ""}"><div class="bimg" style="--c:${d.color || COLORS[0]}">${dragonSVG(st, d.color || COLORS[0], "g-d", 0, d.job)}</div>
-        <b>${esc(d.dragonName || STAGES[st])}</b><small>${esc(d.name)}${d.id === uid ? "（あなた）" : ""}</small>
-        <div class="steps">${steps}</div><small class="stname">${STAGES[st]}</small></div>`;
+        <b>${esc(d.dragonName || stageName(st, d.job))}</b><small>${esc(d.name)}${d.id === uid ? "（あなた）" : ""}</small>
+        <div class="steps">${steps}</div><small class="stname">${esc(stageName(st, d.job))}</small></div>`;
     }).join("");
     return `<section class="card field-card"><div class="field">
         <img class="land" src="img/field.webp" alt="" aria-hidden="true">${field}</div>
@@ -1235,7 +1236,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       const hist = historyBlock(records(d).filter(h => !h.live), d.id);
       const rt = d.ratings || {};
       return `<details class="staff-d"${histOpen.has(d.id) ? " open" : ""}><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", d.streak || 0, d.job)}
-        <div class="nm"><span class="dot" style="background:${esc(d.color)};width:10px;height:10px;margin-right:6px;border:none;box-shadow:none"></span>${esc(d.name)}<small>${esc(d.job)} ・ ${STAGES[d.stage || 0]} ・ ${status}</small>${streakTag(d)}</div>
+        <div class="nm"><span class="dot" style="background:${esc(d.color)};width:10px;height:10px;margin-right:6px;border:none;box-shadow:none"></span>${esc(d.name)}<small>${esc(d.job)} ・ ${stageName(d.stage || 0, d.job)} ・ ${status}</small>${streakTag(d)}</div>
         <span class="pill ${sc === null ? "warn" : tone(sc)}">${sc === null ? "−" : sc}</span></div></summary>
         <div class="staff-detail">
           ${tk ? `<div><b>今日の課題：</b>${esc(tk)}</div>` : ""}

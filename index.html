@@ -241,7 +241,23 @@ details.staff-d .staff-row { background: transparent; }
 .roam .tag { font-size: 10px; font-weight: 700; background: rgba(255,255,255,.85); color: #333; border-radius: 99px; padding: 1px 7px; white-space: nowrap; margin-top: -4px; }
 .roam.me .tag { background: var(--accent); color: #fff; }
 @keyframes roambob { 0%,100% { transform: translate(-50%, -85%); } 50% { transform: translate(-50%, -92%); } }
-@media (prefers-reduced-motion: reduce) { .roam { animation: none; } }
+/* the child dragon on the field: hop, squash on landing, then a silly wiggle */
+.roam.st2 .roam-d .dragon-body { transform-box: view-box; transform-origin: 100px 196px; animation: kidHop 2.6s cubic-bezier(.3,.7,.4,1) infinite; animation-delay: var(--delay, 0s); }
+@keyframes kidHop {
+  0%, 100% { transform: none; }
+  8% { transform: scale(1.14, .84); }
+  20% { transform: translateY(-26px) scale(.9, 1.12) rotate(-8deg); }
+  30% { transform: translateY(-30px) scale(.94, 1.08) rotate(6deg); }
+  40% { transform: translateY(0) scale(1.18, .82); }
+  48% { transform: scale(.96, 1.05); }
+  54% { transform: none; }
+  62% { transform: rotate(10deg); }
+  68% { transform: rotate(-10deg); }
+  74% { transform: rotate(7deg); }
+  80% { transform: rotate(-4deg); }
+  86% { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .roam, .roam.st2 .roam-d .dragon-body { animation: none; } }
 .field-head { padding: 12px 16px 16px; }
 .count { font-size: 13px; color: var(--muted); font-weight: 400; }
 .tally { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -1143,7 +1159,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/15-2</p>
+        <p class="sub">バージョン：11/15-3</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
@@ -1174,7 +1190,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const placed = list.slice(0, SPOTS.length).map((d, i) => ({ d, x: SPOTS[i][0], y: SPOTS[i][1] })).sort((a, b) => a.y - b.y);
     const field = placed.map(({ d, x, y }, i) => {
       const st = d.stage || 0, w = SIZE[st];
-      return `<button class="roam ${d.id === uid ? "me" : ""}" data-peek="${esc(d.id)}" style="left:${x}%;top:${y}%;--w:${w}px;--delay:${(i * .37) % 2}s">
+      return `<button class="roam st${st} ${d.id === uid ? "me" : ""}" data-peek="${esc(d.id)}" style="left:${x}%;top:${y}%;--w:${w}px;--delay:${(i * .37) % 2}s">
         <span class="shadow"></span>${dragonSVG(st, d.color || COLORS[0], "roam-d")}<span class="tag">${esc(d.dragonName || STAGES[st])}</span></button>`;
     }).join("");
     const counts = [0, 0, 0, 0]; list.forEach(d => counts[d.stage || 0]++);

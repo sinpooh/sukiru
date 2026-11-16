@@ -1020,6 +1020,26 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       <button class="primary" id="given-seen">確認しました</button></section>`;
   }
 
+  // admin replies (review / comment) on 報連相 that this person hasn't seen yet
+  const rvKey = (date, rv) => date + "|" + (rv.at || "");
+  function allReplies() {
+    if (!S) return [];
+    const me = (authUser && authUser.email) || "";
+    return Object.entries(S.hrsReview || {}).filter(([, rv]) => rv && rv.by !== me).map(([date, rv]) => ({ date, rv, key: rvKey(date, rv) }));
+  }
+  function newReplies() {
+    if (!S) return [];
+    if (!Array.isArray(S.seenRv)) { S.seenRv = allReplies().map(x => x.key); setTimeout(persist, 0); }   // first run: existing replies count as seen
+    return allReplies().filter(x => !S.seenRv.includes(x.key)).sort((a, b) => a.date.localeCompare(b.date));
+  }
+  const md = d => { const [, m, dd] = d.split("-"); return `${Number(m)}/${Number(dd)}`; };
+  function replyNotice() {
+    const nr = newReplies(); if (!nr.length) return "";
+    return `<section class="card notice-card" role="status"><h2>💬 報連相に返信が来ました <small class="count">${nr.length}件</small></h2>
+      <div class="notice-list">${nr.map(x => `<div class="notice-item"><small>${md(x.date)}の報連相 ・ ${hrsSum(x.rv.pts || {})}点で確認済み</small>${x.rv.comment ? esc(x.rv.comment) : "コメントなしで確認されました"}</div>`).join("")}</div>
+      <button class="primary" id="rv-seen">確認しました</button></section>`;
+  }
+
   function tasksCard() {
     const given = openGiven(S).map(g => `<label class="check ${S.givenDone && S.givenDone[g.id] ? "done" : ""}"><input type="checkbox" data-gdone="${esc(g.id)}" ${S.givenDone && S.givenDone[g.id] ? "checked" : ""}>
       <span><small>シンプーさんから${Number(g.pt) > 0 ? ` ・ できたら+${g.pt}点` : ""}</small>${esc(g.text)}</span><span>${Number(g.pt) > 0 ? `<b class="gpt">+${g.pt}</b>` : ""}</span></label>`).join("");
@@ -1138,7 +1158,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       : `<p class="sub">出勤したらボタンを押してください。ドラゴンが今日の課題を1つ出します。</p><button class="primary" id="checkin">出勤する</button>`;
     const last = S.lastResult ? `<p class="result-msg">前回（${shortDate(S.lastResult.date)}）：${esc(S.lastResult.msg)}</p>` : "";
     const hist = historyBlock(S.history || [], "me");
-    return `${givenNotice()}${nest()}${last}
+    return `${givenNotice()}${replyNotice()}${nest()}${last}
       ${hrsNeedsRemind() ? hrsCard() : ""}
       <section class="card"><h2>人たらし力の課題</h2>${task}</section>
       <section class="card counter-card"><h2><span class="orn">❖</span>点数カウンター<span class="orn">❖</span></h2><div class="counter" id="counter">${counterHTML(sc)}</div>
@@ -1167,7 +1187,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/16-2</p>
+        <p class="sub">バージョン：11/16-3</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
@@ -1352,7 +1372,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     if (isOwner) tabs.push(["admin", "管理者", '<circle cx="9" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 20c0-3.5 3-5.5 6-5.5s6 2 6 5.5M16 6.5a3 3 0 0 1 0 6M18 14.5c2 .6 3 2.5 3 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>']);
     $("#tabs").style.gridTemplateColumns = `repeat(${tabs.length}, 1fr)`;
     const imp = isOwner && staffLoaded ? hrsOpenImportant() : 0;
-    $("#tabs").innerHTML = tabs.map(([k, l, ic]) => `<button data-tab="${k}" ${tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}${k === "admin" && imp ? `<span class="tab-badge" aria-label="未確認の相談${imp}件">${imp}</span>` : ""}${k === "today" && S && newGiven().length ? `<span class="tab-badge" aria-label="新しいタスク${newGiven().length}件">${newGiven().length}</span>` : ""}</button>`).join("");
+    $("#tabs").innerHTML = tabs.map(([k, l, ic]) => `<button data-tab="${k}" ${tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}${k === "admin" && imp ? `<span class="tab-badge" aria-label="未確認の相談${imp}件">${imp}</span>` : ""}${k === "today" && S && (newGiven().length + newReplies().length) ? `<span class="tab-badge" aria-label="新しいお知らせ${newGiven().length + newReplies().length}件">${newGiven().length + newReplies().length}</span>` : ""}</button>`).join("");
     growFx = false;
     liveBar();
     syncBgm();
@@ -1415,6 +1435,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       S.today.hrs = h; hrsEdit = false; hrsDraft = null;
       render(); persist(); updateScore(false); toast(h.important ? "報告しました。管理者に知らせます" : "報告しました。おつかれさま！"); return;
     }
+    if (b.id === "rv-seen") { S.seenRv = [...new Set([...(S.seenRv || []), ...allReplies().map(x => x.key)])].slice(-200); render(); persist(); return; }
     if (b.id === "given-seen") { S.seenGiven = [...new Set([...(S.seenGiven || []), ...openGiven(S).map(g => g.id)])].slice(-200); render(); persist(); return; }
     if (b.id === "bgm-toggle") { setBgm(!bgmOn()); render(); return; }
     if (b.id === "logout" || b.id === "logout2") { await flush(); await firebase.auth().signOut(); location.reload(); return; }
@@ -1610,8 +1631,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         if (snap.exists && S) {
           const a = snap.data().assigned, gt = snap.data().givenTasks, hr = snap.data().hrsReview;
           if (JSON.stringify(a) !== JSON.stringify(S.assigned) || JSON.stringify(gt) !== JSON.stringify(S.givenTasks) || JSON.stringify(hr) !== JSON.stringify(S.hrsReview)) {
-            const before = newGiven().map(g => g.id);
+            const before = newGiven().map(g => g.id), beforeRv = newReplies().map(x => x.key);
             S.assigned = a ? structuredClone(a) : undefined; S.givenTasks = gt ? structuredClone(gt) : []; S.hrsReview = hr ? structuredClone(hr) : undefined;
+            if (newReplies().some(x => !beforeRv.includes(x.key))) { toast("💬 報連相に返信が来ました"); try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {} }
             if (newGiven().some(g => !before.includes(g.id))) { toast("📩 シンプーさんから新しいタスクが届きました"); try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {} }
             const f = document.activeElement && document.activeElement.id;
             if (tab !== "admin" && f !== "new-task" && f !== "new-goal" && f !== "note" && !(f && f.startsWith("hrs-"))) render();

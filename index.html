@@ -764,7 +764,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const sat = d ? d / (1 - Math.abs(mx + mn - 1)) : 0;
     return `hsl(${Math.round(h)} ${Math.round(Math.min(sat, .7) * 100)}% 74%)`;   // same color as the dragon, lighter
   }
+  const KNOWN_HEX = ["3fa36b", "d9642a", "3b7dd8", "c4479a", "7b5cd6", "d4a417", "2aa6a6", "c8443c", "5f7d2e", "8a6a4f", "4fb0e0", "e87a95", "8dbf3a", "4d5560", "233a73"];
   function dragonSVG(stage, color, cls = "dragon", streak = 0) {
+    const hex = String(color || "").replace("#", "").toLowerCase();
     const dark = `color-mix(in oklab, ${color} 62%, #000)`;
     const light = `color-mix(in oklab, ${color} 35%, #fff)`;
     const eye = (x, y, r = 7) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#1b1b1b"/><circle cx="${x + r * .35}" cy="${y - r * .35}" r="${r * .35}" fill="#fff"/>`;
@@ -799,24 +801,14 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
         <path d="M81 121 v5 M87 121 v5 M109 121 v5 M115 121 v5" stroke="#5a2d12" stroke-width="2" stroke-linecap="round"/>`;
     } else if (stage === 2) {
       // the child is a picture (シンプーさん's design), with the body painted in each staff color
-      const known = ["3fa36b", "d9642a", "3b7dd8", "c4479a", "7b5cd6", "d4a417", "2aa6a6", "c8443c", "5f7d2e", "8a6a4f", "4fb0e0", "e87a95", "8dbf3a", "4d5560", "233a73"];
-      const hex = String(color || "").replace("#", "").toLowerCase();
-      const src = known.includes(hex) ? `img/kid-${hex}.webp` : "img/kid-base.webp";
+      const src = KNOWN_HEX.includes(hex) ? `img/kid-${hex}.webp` : "img/kid-base.webp";
       const im = h => `<image href="${h}" x="22" y="0" width="156" height="200" preserveAspectRatio="xMidYMid meet"/>`;
       // the wings are separate pictures behind the body so they can flap
       return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><g class="kid-wing kid-wl">${im("img/wingL.webp")}</g><g class="kid-wing kid-wr">${im("img/wingR.webp")}</g>${im(src)}</g></svg>`;
     } else {
-      g = `<path d="M70 112 q-60 -40 -58 -88 q16 30 34 30 q-4 -18 6 -30 q10 34 40 56z M130 112 q60 -40 58 -88 q-16 30 -34 30 q4 -18 -6 -30 q-10 34 -40 56z" fill="${dark}"/>
-        <path d="M132 162 q48 10 52 -30 q4 10 -2 22 l10 -2 q-16 34 -60 22" fill="${color}"/>
-        <ellipse cx="100" cy="148" rx="42" ry="38" fill="${color}"/>
-        <path d="M84 120 q16 -10 32 0 l-4 56 q-12 6 -24 0z" fill="${light}"/>
-        <path d="M86 118 q-4 -30 14 -48 q18 18 14 48z" fill="${color}"/>
-        <ellipse cx="100" cy="62" rx="28" ry="24" fill="${color}"/>
-        <path d="M82 46 l-12 -26 l22 16z M118 46 l12 -26 l-22 16z" fill="#f3e3b5"/>
-        ${eye(90, 58, 5.5)}${eye(110, 58, 5.5)}
-        <path d="M92 74 q8 5 16 0" fill="none" stroke="#1b1b1b" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M128 70 q14 -6 22 -2 q-6 2 -4 6 q8 0 12 6 q-14 2 -30 -4z" fill="#f7a23b"/>
-        <ellipse cx="78" cy="184" rx="14" ry="7" fill="${dark}"/><ellipse cx="122" cy="184" rx="14" ry="7" fill="${dark}"/>`;
+      // the grown dragon is a picture too (シンプーさん's design), body painted in each staff color
+      const src = KNOWN_HEX.includes(hex) ? `img/adult-${hex}.webp` : "img/adult-base.webp";
+      return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><image href="${src}" x="0" y="0" width="200" height="200" preserveAspectRatio="xMidYMid meet"/></g></svg>`;
     }
     return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body">${g}</g></svg>`;
   }
@@ -1187,7 +1179,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/16-3</p>
+        <p class="sub">バージョン：11/16-4</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>

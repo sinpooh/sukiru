@@ -263,7 +263,12 @@ details.staff-d .staff-row { background: transparent; }
   80% { transform: rotate(-4deg); }
   86% { transform: none; }
 }
-@media (prefers-reduced-motion: reduce) { .roam, .roam.st2 .roam-d .dragon-body { animation: none; } }
+/* grown dragon on the field: calm breathing and a slow double nod */
+.roam.st3 .roam-d .dragon-body { transform-box: view-box; transform-origin: 100px 196px; animation: adBreathe 5.2s ease-in-out infinite; animation-delay: var(--delay, 0s); }
+.roam.st3 .roam-d .ad-head { transform-box: view-box; transform-origin: 101px 90px; animation: adNod 5.2s ease-in-out infinite; animation-delay: var(--delay, 0s); }
+@keyframes adBreathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, .99); } }
+@keyframes adNod { 0%, 55%, 100% { transform: none; } 62% { transform: translateY(3px) scaleY(.94); } 69% { transform: none; } 76% { transform: translateY(3px) scaleY(.94); } 84% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .roam, .roam.st2 .roam-d .dragon-body, .roam.st3 .roam-d .dragon-body, .roam.st3 .roam-d .ad-head { animation: none; } }
 .field-head { padding: 12px 16px 16px; }
 .count { font-size: 13px; color: var(--muted); font-weight: 400; }
 .tally { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -807,8 +812,10 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><g class="kid-wing kid-wl">${im("img/wingL.webp")}</g><g class="kid-wing kid-wr">${im("img/wingR.webp")}</g>${im(src)}</g></svg>`;
     } else {
       // the grown dragon is a picture too (シンプーさん's design), body painted in each staff color
-      const src = KNOWN_HEX.includes(hex) ? `img/adult-${hex}.webp` : "img/adult-base.webp";
-      return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><image href="${src}" x="0" y="0" width="200" height="200" preserveAspectRatio="xMidYMid meet"/></g></svg>`;
+      const k = KNOWN_HEX.includes(hex) ? hex : "base";
+      const im = h => `<image href="${h}" x="0" y="0" width="200" height="200" preserveAspectRatio="xMidYMid meet"/>`;
+      // the head is a separate picture behind the body so it can nod
+      return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><g class="ad-head">${im(`img/adult-${k}-h.webp`)}</g>${im(`img/adult-${k}.webp`)}</g></svg>`;
     }
     return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body">${g}</g></svg>`;
   }

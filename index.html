@@ -1161,10 +1161,10 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     return `${givenNotice()}${replyNotice()}${nest()}${last}
       ${hrsNeedsRemind() ? hrsCard() : ""}
       <section class="card"><h2>人たらし力の課題</h2>${task}</section>
+      ${hrsNeedsRemind() ? "" : hrsCard()}
       <section class="card counter-card"><h2><span class="orn">❖</span>点数カウンター<span class="orn">❖</span></h2><div class="counter" id="counter">${counterHTML(sc)}</div>
         <p class="sub">やった回数は、数字の欄をタップして直接入力するか（0.5のような数字も入れられます）、＋−で変えます。日付が変わると、その日の点数でドラゴンが育ちます。</p>
         <div class="items">${items}</div></section>
-      ${hrsNeedsRemind() ? "" : hrsCard()}
       ${tasksCard()}
       ${goalsCard()}
       ${hist ? `<section class="card"><h2>${histOpen.has("me") ? "これまでの点数" : "最近の点数"}</h2>${hist}</section>` : ""}`;
@@ -1187,7 +1187,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/16-5</p>
+        <p class="sub">バージョン：11/17-1</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>

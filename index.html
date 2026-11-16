@@ -477,7 +477,8 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 .check.done span { text-decoration: line-through; color: var(--muted); }
 .check small { display: block; font-size: 11px; color: var(--accent); font-weight: 700; text-decoration: none; }
 .addline { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
-.addline.add3 { grid-template-columns: 1fr auto auto; }
+.addline.add3 { grid-template-columns: 1fr 1fr; }
+.addline.add3 input { grid-column: 1 / -1; }
 .later-h { font-size: 15px; margin: 14px 0 6px; }
 .check.later { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
 .later-mark { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 2px 8px; }
@@ -543,9 +544,9 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const pad = n => String(n).padStart(2, "0");
   const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
-  const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
-  // own tasks can be planned for a later day (x.day); until then they wait in "明日のタスク"
-  const isLater = x => !!(x && x.day && x.day > todayStr());
+  // own tasks can be kept for the next work day (x.next, set on x.from); they move into today's list
+  // when the person presses 出勤 on a later day. (x.day: older "tomorrow" tasks, kept working)
+  const isLater = x => !!(x && (x.next || (x.day && x.day > todayStr())));
   const tasksNow = d => ((d && d.tasks) || []).filter(x => !isLater(x));
   const tasksLater = d => ((d && d.tasks) || []).filter(isLater);
   const shortDate = s => s ? `${Number(s.slice(5, 7))}/${Number(s.slice(8, 10))}` : "";
@@ -1057,15 +1058,15 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const row = x => `<label class="check ${x.done ? "done" : ""}"><input type="checkbox" data-tdone="${x.id}" ${x.done ? "checked" : ""}>
       <span>${esc(x.text)}</span><button class="mini" data-tdel="${x.id}" aria-label="消す">×</button></label>`;
     const mine = tasksNow(S).map(row).join("");
-    const later = tasksLater(S).map(x => `<div class="check later"><span class="later-mark">明日</span>
+    const later = tasksLater(S).map(x => `<div class="check later"><span class="later-mark">次回</span>
       <span>${esc(x.text)}</span><span class="later-btns"><button class="mini" data-tnow="${x.id}" aria-label="今日にうつす">今日へ</button><button class="mini" data-tdel="${x.id}" aria-label="消す">×</button></span></div>`).join("");
     const n = tasksNow(S).length + openGiven(S).length;
     const d = tasksNow(S).filter(x => x.done).length + openGiven(S).filter(g => S.givenDone && S.givenDone[g.id]).length;
     return `<section class="card"><h2>今日のタスク ${n ? `<span class="month">${d} / ${n}</span>` : ""}</h2>
       ${n ? `<div class="checks">${given}${mine}</div>` : `<p class="sub">今日やることを書いておきましょう。終わったらチェックします。終わっていないタスクは次の日に持ちこします。</p>`}
-      ${later ? `<h3 class="later-h">明日のタスク <small class="sub">${tasksLater(S).length}件</small></h3><div class="checks">${later}</div>` : ""}
-      <div class="addline add3"><input type="text" id="new-task" placeholder="例：棚の商品を10点撮影" maxlength="60"><button class="mini" id="add-task">今日に追加</button><button class="mini" id="add-task-tm">明日に追加</button></div>
-      <p class="sub small-note">「明日に追加」したタスクは、明日になると自動で今日のタスクに入ります。</p></section>`;
+      ${later ? `<h3 class="later-h">次回出勤のタスク <small class="sub">${tasksLater(S).length}件</small></h3><div class="checks">${later}</div>` : ""}
+      <div class="addline add3"><input type="text" id="new-task" placeholder="例：棚の商品を10点撮影" maxlength="60"><button class="mini" id="add-task">今日に追加</button><button class="mini" id="add-task-tm">次回出勤に追加</button></div>
+      <p class="sub small-note">「次回出勤に追加」したタスクは、次に出勤ボタンを押した時に今日のタスクに入ります。</p></section>`;
   }
 
   function goalsCard() {
@@ -1203,7 +1204,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/17-2</p>
+        <p class="sub">バージョン：11/17-3</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
@@ -1317,7 +1318,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
           <div><b>自己評価：</b>素直さ ${rt.sunao || "-"} ・ 興味 ${rt.kyomi || "-"} ・ 表現力 ${rt.hyogen || "-"}</div>
           ${hist ? `<div><b>これまでの点数</b></div>${hist}` : ""}
           ${(d.goals || []).filter(g => g.month === monthStr()).length ? `<div><b>今月の目標</b></div>${d.goals.filter(g => g.month === monthStr()).map(g => `<div class="kv"><span>${esc(g.text)}</span><span>${g.done ? "達成" : "−"}</span></div>`).join("")}` : ""}
-          ${tasksNow(d).length || openGiven(d).length ? `<div><b>今日のタスク</b></div>${openGiven(d).map(g => `<div class="kv"><span>${esc(g.text)}（渡したタスク${Number(g.pt) > 0 ? "・" + g.pt + "点" : ""}）</span><span>${d.givenDone && d.givenDone[g.id] ? "完了" : "−"} <button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}${tasksNow(d).map(x => `<div class="kv"><span>${esc(x.text)}</span><span>${x.done ? "完了" : "−"}</span></div>`).join("")}` : ""}${tasksLater(d).length ? `<div><b>明日のタスク</b></div>${tasksLater(d).map(x => `<div class="kv"><span>${esc(x.text)}</span><span>明日</span></div>`).join("")}` : ""}
+          ${tasksNow(d).length || openGiven(d).length ? `<div><b>今日のタスク</b></div>${openGiven(d).map(g => `<div class="kv"><span>${esc(g.text)}（渡したタスク${Number(g.pt) > 0 ? "・" + g.pt + "点" : ""}）</span><span>${d.givenDone && d.givenDone[g.id] ? "完了" : "−"} <button class="mini" data-gdel="${esc(d.id)}|${esc(g.id)}" aria-label="取り消す">×</button></span></div>`).join("")}${tasksNow(d).map(x => `<div class="kv"><span>${esc(x.text)}</span><span>${x.done ? "完了" : "−"}</span></div>`).join("")}` : ""}${tasksLater(d).length ? `<div><b>次回出勤のタスク</b></div>${tasksLater(d).map(x => `<div class="kv"><span>${esc(x.text)}</span><span>次回</span></div>`).join("")}` : ""}
           <div class="assign"><input type="text" id="gv-${esc(d.id)}" placeholder="タスクを渡す" maxlength="60" aria-label="${esc(d.name)}さんに渡すタスク"><button class="mini" data-give="${esc(d.id)}">渡す</button></div>
           <div class="assign"><input type="text" id="as-${esc(d.id)}" placeholder="今日の課題を指定する" value="${d.assigned && d.assigned.date === t ? esc(d.assigned.text) : ""}" aria-label="${esc(d.name)}さんへの課題"><button class="mini" data-assign="${esc(d.id)}">指定</button></div>
         </div></details>`;
@@ -1500,12 +1501,12 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       return;
     }
     if (!S) return;
-    if (b.id === "add-task" || b.id === "add-task-tm") { const v = $("#new-task").value.trim(); if (!v) return; const tm = b.id === "add-task-tm"; S.tasks = [...(S.tasks || []), { id: nid(), text: v, done: false, ...(tm ? { day: tomorrowStr() } : {}) }]; render(); persist(); if (tm) toast("明日のタスクに入れました"); $("#new-task").focus(); return; }
-    if (d.tnow) { const x = (S.tasks || []).find(y => y.id === d.tnow); if (x) delete x.day; render(); persist(); return; }
+    if (b.id === "add-task" || b.id === "add-task-tm") { const v = $("#new-task").value.trim(); if (!v) return; const tm = b.id === "add-task-tm"; S.tasks = [...(S.tasks || []), { id: nid(), text: v, done: false, ...(tm ? { next: true, from: todayStr() } : {}) }]; render(); persist(); if (tm) toast("次回出勤のタスクに入れました"); $("#new-task").focus(); return; }
+    if (d.tnow) { const x = (S.tasks || []).find(y => y.id === d.tnow); if (x) { delete x.day; delete x.next; delete x.from; } render(); persist(); return; }
     if (d.tdel) { S.tasks = S.tasks.filter(x => x.id !== d.tdel); render(); persist(); return; }
     if (b.id === "add-goal") { const v = $("#new-goal").value.trim(); if (!v) return; S.goals = [...(S.goals || []), { id: nid(), text: v, month: monthStr(), done: false }]; render(); persist(); return; }
     if (d.goaldel) { S.goals = S.goals.filter(x => x.id !== d.goaldel); render(); persist(); return; }
-    if (b.id === "checkin") { S.today.checkedIn = true; S.today.task = pickTask(); render(); persist(); toast("今日の課題が出ました"); return; }
+    if (b.id === "checkin") { S.today.checkedIn = true; (S.tasks || []).forEach(x => { if (x.next && (x.from || "") < todayStr()) { delete x.next; delete x.from; } }); S.today.task = pickTask(); render(); persist(); toast("今日の課題が出ました"); return; }
     if (d.dec) { const it = S.items.find(x => x.id == d.dec); it.val = Math.max(0, r1((Number(it.val) || 0) - 1)); $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
     if (d.inc) { const it = S.items.find(x => x.id == d.inc); it.val = r1((Number(it.val) || 0) + 1); $("#val-" + it.id).value = it.val; liveTotals(it); persist(); return; }
     if (d.up || d.down) {

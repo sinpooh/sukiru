@@ -505,6 +505,18 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   // straight 100-point days needed to move up from each stage: egg→hatchling 3, hatchling→child 3, child→adult 5
   const GROW_NEED = [3, 3, 5];
   const growDays = st => GROW_NEED[st] || 3;
+  // after 成竜: the T-shirt changes color every 5 straight 100-point days (白→黄色→青→赤→黒)
+  const SHIRTS = ["白", "黄色", "青", "赤", "黒"], SHIRT_KEYS = ["", "y", "b", "r", "k"], SHIRT_NEED = 5;
+  const shirtOf = d => Math.max(0, Math.min(4, Number(d && d.shirt) || 0));
+  // can today's 100 points make the dragon grow (stage up, or a new T-shirt color)?
+  const canGrow = d => (d.stage < 3 ? (d.streak || 0) + 1 >= growDays(d.stage) : shirtOf(d) < 4 && (d.streak || 0) + 1 >= SHIRT_NEED);
+  // apply one growth step; returns what to show in the evolution scene
+  function growStep(d) {
+    const from = d.stage, a = shirtOf(d);
+    if (d.stage < 3) { d.stage++; d.shirt = 0; d.streak = 0; return { from, to: d.stage, sh: null, msg: `進化！ ${STAGES[d.stage]}になりました` }; }
+    d.shirt = a + 1; d.streak = 0;
+    return { from, to: 3, sh: { a, b: d.shirt }, msg: `Tシャツが${SHIRTS[d.shirt]}になりました！` };
+  }
   const COLORS = ["#3fa36b", "#d9642a", "#3b7dd8", "#c4479a", "#7b5cd6", "#d4a417", "#2aa6a6", "#c8443c", "#5f7d2e", "#8a6a4f", "#4fb0e0", "#e87a95", "#8dbf3a", "#4d5560", "#233a73"];
   const JOBS = ["接客", "ネット出品", "梱包", "メンテナンス", "営業", "中間管理職", "経営者"];
   const ELS = { sunao: "素直さ", kyomi: "相手への興味", hyogen: "表現力" };
@@ -635,12 +647,12 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   // or today's 3rd straight 100 that was reached before instant evolution existed
   function showPendingEvo() {
     if (!S) return;
-    if (pendingEvo) { const e = pendingEvo; pendingEvo = null; setTimeout(() => evolve(e.from, e.to, e.sc), 400); return; }
+    if (pendingEvo) { const e = pendingEvo; pendingEvo = null; setTimeout(() => evolve(e.from, e.to, e.sc, e.sh), 400); return; }
     const sc = dayScore(S);
-    if (S.today && S.today.date === todayStr() && sc >= 100 && !S.today.evolved && S.stage < 3 && (S.streak || 0) + 1 >= growDays(S.stage)) {
-      const from = S.stage; S.stage++; S.streak = 0; S.today.evolved = true; S.today.celebrated = true;
-      S.lastResult = { date: S.today.date, msg: `進化！ ${STAGES[S.stage]}になりました` };
-      persist(); setTimeout(() => evolve(from, S.stage, sc), 400);
+    if (S.today && S.today.date === todayStr() && sc >= 100 && !S.today.evolved && canGrow(S)) {
+      const g = growStep(S); S.today.evolved = true; S.today.celebrated = true;
+      S.lastResult = { date: S.today.date, msg: g.msg };
+      persist(); setTimeout(() => evolve(g.from, g.to, sc, g.sh), 400);
     }
   }
   let banner = "";
@@ -666,14 +678,17 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const worked = S.today.checkedIn || sc > 0 || !!hrsToday(S);
     if (worked) {
       let msg;
-      if (S.today.evolved) msg = `${sc}点。この日に${STAGES[S.stage]}に進化しました`;
+      if (S.today.evolved) msg = S.stage === 3 && shirtOf(S) > 0 ? `${sc}点。この日にTシャツが${SHIRTS[shirtOf(S)]}になりました` : `${sc}点。この日に${STAGES[S.stage]}に進化しました`;
       else if (sc >= 100) {
         S.streak++;
-        if (S.stage < 3 && S.streak >= growDays(S.stage)) { pendingEvo = { from: S.stage, to: S.stage + 1, sc }; S.stage++; S.streak = 0; growFx = true; msg = `進化！ ${STAGES[S.stage]}になりました`; }
+        if (S.stage < 3 ? S.streak >= growDays(S.stage) : shirtOf(S) < 4 && S.streak >= SHIRT_NEED) { const g = growStep(S); pendingEvo = { from: g.from, to: g.to, sh: g.sh, sc }; growFx = true; msg = g.msg; }
         else msg = `100点達成！ 連続${S.streak}日目`;
       } else if (sc <= 80) {
-        const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0;
-        msg = before > S.stage ? `${sc}点で、${STAGES[S.stage]}に戻りました` : `${sc}点。たまごのまま、今日がんばろう`;
+        if (S.stage === 3 && shirtOf(S) > 0) { S.shirt = shirtOf(S) - 1; S.streak = 0; msg = `${sc}点で、Tシャツが${SHIRTS[S.shirt]}に戻りました`; }
+        else {
+          const before = S.stage; S.stage = Math.max(0, S.stage - 1); S.streak = 0; S.shirt = 0;
+          msg = before > S.stage ? `${sc}点で、${STAGES[S.stage]}に戻りました` : `${sc}点。たまごのまま、今日がんばろう`;
+        }
       } else { S.streak = 0; msg = `${sc}点で、ドラゴンは現状維持です`; }
       const hrs = hrsToday(S);
       S.history = [...(S.history || []), { date: S.today.date, s: sc, res: S.today.reflect?.result || null, items: snapDay(S), ...(hrs ? { hrs: structuredClone(hrs), hp: hrsPtsOf(S, S.today.date, hrs) } : {}) }].slice(-1000);
@@ -755,7 +770,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       else { S = { ...structuredClone(result), ...keep }; }
       base = structuredClone(result);
       if (merged && !dirty) { const f = document.activeElement && document.activeElement.id; if (!(f && (f.startsWith("val-") || f.startsWith("name-") || f.startsWith("pt-") || f.startsWith("hrs-") || f === "new-task" || f === "new-goal" || f === "note"))) render(); }
-      const pub = { name: S.name, job: S.job, color: S.color, dragonName: S.dragonName || "", stage: S.stage };
+      const pub = { name: S.name, job: S.job, color: S.color, dragonName: S.dragonName || "", stage: S.stage, shirt: shirtOf(S) };
       const pubJson = JSON.stringify(pub);
       if (pubJson !== lastPublic) { await db.doc("dragons/" + uid).set(pub); lastPublic = pubJson; }
     } catch (e) {
@@ -783,7 +798,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     return `hsl(${Math.round(h)} ${Math.round(Math.min(sat, .7) * 100)}% 74%)`;   // same color as the dragon, lighter
   }
   const KNOWN_HEX = ["3fa36b", "d9642a", "3b7dd8", "c4479a", "7b5cd6", "d4a417", "2aa6a6", "c8443c", "5f7d2e", "8a6a4f", "4fb0e0", "e87a95", "8dbf3a", "4d5560", "233a73"];
-  function dragonSVG(stage, color, cls = "dragon", streak = 0) {
+  function dragonSVG(stage, color, cls = "dragon", streak = 0, shirt = 0) {
     const hex = String(color || "").replace("#", "").toLowerCase();
     const dark = `color-mix(in oklab, ${color} 62%, #000)`;
     const light = `color-mix(in oklab, ${color} 35%, #fff)`;
@@ -828,7 +843,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       const k = KNOWN_HEX.includes(hex) ? hex : "base";
       const im = h => `<image href="${h}" x="0" y="0" width="200" height="200" preserveAspectRatio="xMidYMid meet"/>`;
       // the wings are separate pictures behind the body so they can move a little
-      return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><g class="ad-wing ad-wl">${im("img/adult-wl.webp")}</g><g class="ad-wing ad-wr">${im("img/adult-wr.webp")}</g>${im(`img/adult-${k}.webp`)}</g></svg>`;
+      return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body"><g class="ad-wing ad-wl">${im("img/adult-wl.webp")}</g><g class="ad-wing ad-wr">${im("img/adult-wr.webp")}</g>${im(`img/adult-${k}${SHIRT_KEYS[Math.max(0, Math.min(4, Number(shirt) || 0))] ? "-" + SHIRT_KEYS[Math.max(0, Math.min(4, Number(shirt) || 0))] : ""}.webp`)}</g></svg>`;
     }
     return `<svg class="${cls}" viewBox="0 0 200 200" role="img" aria-label="${STAGES[stage]}のドラゴン"><g class="dragon-body">${g}</g></svg>`;
   }
@@ -895,10 +910,10 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   ];
   function celebrate(sc) {
     S.today.celebrated = true;
-    if (S.stage < 3 && (S.streak || 0) + 1 >= growDays(S.stage) && !S.today.evolved) {
-      const from = S.stage; S.stage++; S.streak = 0; S.today.evolved = true;
-      S.lastResult = { date: S.today.date, msg: `進化！ ${STAGES[S.stage]}になりました` };
-      persist(); evolve(from, S.stage, sc); return;
+    if (canGrow(S) && !S.today.evolved) {
+      const g = growStep(S); S.today.evolved = true;
+      S.lastResult = { date: S.today.date, msg: g.msg };
+      persist(); evolve(g.from, g.to, sc, g.sh); return;
     }
     persist();
     const el = $("#celebrate"), st = Math.max(0, Math.min(3, S.stage || 0)), cf = CELE[st];
@@ -906,7 +921,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const bits = Array.from({ length: cf.n }, (_, i) => `<i class="${cf.fall}" style="--x:${Math.round(Math.random() * 100)}%;--c:${cf.cols[i % cf.cols.length]};--d:${(Math.random() * .9).toFixed(2)}s;--r:${Math.round(Math.random() * 720 - 360)}deg;--s:${(.7 + Math.random() * .8).toFixed(2)}">${cf.chars[i % cf.chars.length]}</i>`).join("");
     const fire = st === 3 ? `<div class="cele-fire"><i></i><i></i><i></i></div>` : "";
     el.className = "celebrate st" + st;
-    el.innerHTML = `<div class="confetti">${bits}</div><div class="cele-card" role="alert">${st === 3 ? `<div class="cele-rays"></div>` : ""}<div class="cele-glow"></div><div class="cele-dragon">${dragonSVG(st, S.color, "cele-d")}${fire}</div>
+    el.innerHTML = `<div class="confetti">${bits}</div><div class="cele-card" role="alert">${st === 3 ? `<div class="cele-rays"></div>` : ""}<div class="cele-glow"></div><div class="cele-dragon">${dragonSVG(st, S.color, "cele-d", 0, shirtOf(S))}${fire}</div>
       <div class="cele-title">本日の100点達成！</div><div class="cele-sub">おめでとう！ ${cf.sub(nm)}</div><div class="cele-score">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
     el.hidden = false;
     playSfx("100");
@@ -962,21 +977,21 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       }
     } catch (e) {}
   }
-  function evolve(from, to, sc) {
+  function evolve(from, to, sc, sh = null) {
     const el = $("#celebrate"), nm = S.dragonName ? esc(S.dragonName) : "ドラゴン";
     const bits = Array.from({ length: 50 }, (_, i) => `<i class="fall" style="--x:${Math.round(Math.random() * 100)}%;--c:${["#ffd34d", "#ff8fb1", "#5bc0eb", "#9bdb6b", "#ff7a59"][i % 5]};--d:${(2 + Math.random() * .9).toFixed(2)}s;--r:${Math.round(Math.random() * 720 - 360)}deg;--s:${(.7 + Math.random() * .8).toFixed(2)}">${["★", "●", "■", "♥"][i % 4]}</i>`).join("");
     const egg = from === 0;
-    const old = dragonSVG(from, S.color, "cele-d"), neu = dragonSVG(to, S.color, "cele-d");
+    const old = dragonSVG(from, S.color, "cele-d", 0, sh ? sh.a : 0), neu = dragonSVG(to, S.color, "cele-d", 0, sh ? sh.b : 0);
     const stageOld = egg
       ? `<div class="evo-old egg"><div class="half top">${old}</div><div class="half bottom">${old}</div>
           <svg class="crack" viewBox="0 0 200 200"><path d="M58 118 L72 108 L82 122 L96 104 L108 124 L122 106 L134 120 L144 112" fill="none" stroke="#3a2a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
       : `<div class="evo-old">${old}</div>`;
-    const title = egg ? "たまごがわれた！" : "進化した！";
-    const sub = egg ? `${nm}が生まれたよ！ ヒナになりました` : `${nm}が${STAGES[to]}になりました！`;
+    const title = egg ? "たまごがわれた！" : sh ? "Tシャツが変わった！" : "進化した！";
+    const sub = egg ? `${nm}が生まれたよ！ ヒナになりました` : sh ? `${nm}のTシャツが${SHIRTS[sh.b]}になりました！` : `${nm}が${STAGES[to]}になりました！`;
     el.className = "celebrate evolve" + (egg ? " hatch" : "");
     el.innerHTML = `<div class="confetti">${bits}</div><div class="cele-card" role="alert"><div class="cele-glow"></div><div class="evo-flash"></div>
       <div class="evo-stage">${stageOld}<div class="evo-new">${neu}</div></div>
-      <div class="cele-title evo-t">${title}</div><div class="cele-sub evo-t">${growDays(from)}日連続100点達成！ ${sub}</div><div class="cele-score evo-t">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
+      <div class="cele-title evo-t">${title}</div><div class="cele-sub evo-t">${sh ? SHIRT_NEED : growDays(from)}日連続100点達成！ ${sub}</div><div class="cele-score evo-t">${sc}点</div><div class="cele-tap">タップで閉じる</div></div>`;
     el.hidden = false;
     playSfx("evo");
     try { navigator.vibrate && navigator.vibrate([40, 60, 40, 60, 40, 200, 300]); } catch (e) {}
@@ -997,9 +1012,11 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
 
   function nest() {
     const bars = STAGES.map((_, i) => `<i class="${i <= S.stage ? "on" : ""}"></i>`).join("");
-    const next = S.stage < 3 ? `次の進化まで 100点を あと<b>${growDays(S.stage) - S.streak}</b>日` : `最終形態！ 100点連続 <b>${S.streak}</b>日`;
-    return `<section class="nest" style="--dc:${S.color}"><div class="nest-light"></div><div class="nest-dragon ${growFx ? "grow-fx" : ""}">${dragonSVG(S.stage, S.color, "dragon", S.streak)}</div><div class="pedestal"></div>
-      <div class="stage-name">${S.dragonName ? esc(S.dragonName) : STAGES[S.stage]}</div>${S.dragonName ? `<div class="dragon-name">${STAGES[S.stage]}</div>` : ""}<div class="stages">${bars}</div><div class="streak">${next}</div></section>`;
+    const shi = shirtOf(S);
+    const next = S.stage < 3 ? `次の進化まで 100点を あと<b>${growDays(S.stage) - S.streak}</b>日`
+      : shi < 4 ? `Tシャツが${SHIRTS[shi + 1]}になるまで 100点を あと<b>${SHIRT_NEED - S.streak}</b>日` : `黒Tシャツ！ 100点連続 <b>${S.streak}</b>日`;
+    return `<section class="nest" style="--dc:${S.color}"><div class="nest-light"></div><div class="nest-dragon ${growFx ? "grow-fx" : ""}">${dragonSVG(S.stage, S.color, "dragon", S.streak, shirtOf(S))}</div><div class="pedestal"></div>
+      <div class="stage-name">${S.dragonName ? esc(S.dragonName) : STAGES[S.stage]}</div>${S.dragonName || S.stage === 3 ? `<div class="dragon-name">${S.dragonName ? STAGES[S.stage] : ""}${S.stage === 3 ? `${S.dragonName ? "・" : ""}${SHIRTS[shi]}Tシャツ` : ""}</div>` : ""}<div class="stages">${bars}</div><div class="streak">${next}</div></section>`;
   }
 
   function currentTask() {
@@ -1204,7 +1221,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       ${genreCard}
       <section class="card"><h2>わたしの設定</h2>
         ${authUser ? `<p class="sub">ログイン中のアカウント：<b style="overflow-wrap:anywhere">${esc(authUser.email || "")}</b></p>` : ""}
-        <p class="sub">バージョン：11/17-3</p>
+        <p class="sub">バージョン：11/25-1</p>
         <label class="check-line"><input type="checkbox" id="set-bgm" ${bgmOn() ? "checked" : ""}> 原っぱでBGMを流す</label>
         <label class="check-line"><input type="checkbox" id="set-sfx" ${sfxOn() ? "checked" : ""}> 100点達成・進化の効果音を鳴らす</label>
         <label class="field">名前<input type="text" id="set-name" value="${esc(S.name)}"></label>
@@ -1236,13 +1253,13 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     const field = placed.map(({ d, x, y }, i) => {
       const st = d.stage || 0, w = SIZE[st];
       return `<button class="roam st${st} ${d.id === uid ? "me" : ""}" data-peek="${esc(d.id)}" style="left:${x}%;top:${y}%;--w:${w}px;--delay:${(i * .37) % 2}s">
-        <span class="shadow"></span>${dragonSVG(st, d.color || COLORS[0], "roam-d")}<span class="tag">${esc(d.dragonName || STAGES[st])}</span></button>`;
+        <span class="shadow"></span>${dragonSVG(st, d.color || COLORS[0], "roam-d", 0, shirtOf(d))}<span class="tag">${esc(d.dragonName || STAGES[st])}</span></button>`;
     }).join("");
     const counts = [0, 0, 0, 0]; list.forEach(d => counts[d.stage || 0]++);
     const book = list.map(d => {
       const st = d.stage || 0;
       const steps = STAGES.map((n, k) => `<i class="${k <= st ? "on" : ""}" title="${n}"></i>`).join("");
-      return `<div class="bcard ${d.id === uid ? "me" : ""}"><div class="bimg" style="--c:${d.color || COLORS[0]}">${dragonSVG(st, d.color || COLORS[0], "g-d")}</div>
+      return `<div class="bcard ${d.id === uid ? "me" : ""}"><div class="bimg" style="--c:${d.color || COLORS[0]}">${dragonSVG(st, d.color || COLORS[0], "g-d", 0, shirtOf(d))}</div>
         <b>${esc(d.dragonName || STAGES[st])}</b><small>${esc(d.name)}${d.id === uid ? "（あなた）" : ""}</small>
         <div class="steps">${steps}</div><small class="stname">${STAGES[st]}</small></div>`;
     }).join("");
@@ -1277,7 +1294,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       const sel3 = (k, max) => `<select id="hrs-rv-${k}-${esc(d.id)}" aria-label="${k}">${Array.from({ length: max + 1 }, (_, i) => `<option${i === Number(p[k]) ? " selected" : ""}>${i}</option>`).join("")}</select>`;
       const lines = (h.kind === "none" ? [["気づき", h.why], ["次にやること", h.act]] : [["起きたこと", h.what], ["原因", h.unknown ? "わからない（不明）" : h.why], ["どうする", h.act]])
         .filter(x => hlen(x[1])).map(([k, v]) => `<div class="hrs-line"><b>${k}</b>${esc(v)}</div>`).join("");
-      return `<details class="staff-d"${h.important && !rv ? " open" : ""}><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d")}
+      return `<details class="staff-d"${h.important && !rv ? " open" : ""}><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", 0, shirtOf(d))}
         <div class="nm">${esc(d.name)}<small>${h.at ? new Date(h.at).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" }) + " 報告" : ""}${h.editedAt ? "（書き直しあり）" : ""}</small>
         <div><span class="hrs-tag ${h.kind === "none" ? "none" : "issue"}">${h.kind === "none" ? "問題なし" : "問題・相談あり"}</span> ${h.important ? `<span class="hrs-tag imp">重要・相談したい</span>` : ""}</div></div>
         <span class="pill ${rv ? "good" : "warn"}">${hrsSum(p)}</span></div></summary>
@@ -1308,7 +1325,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       const items = (d.items || []).map(it => `<div class="kv"><span>${it.genre ? `［${esc(it.genre)}］` : ""}${esc(it.name)}（${it.pt}点）</span><span>${isToday ? it.val : 0}回 = ${isToday ? r1(it.pt * it.val) : 0}点</span></div>`).join("");
       const hist = historyBlock(records(d).filter(h => !h.live), d.id);
       const rt = d.ratings || {};
-      return `<details class="staff-d"${histOpen.has(d.id) ? " open" : ""}><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", d.streak || 0)}
+      return `<details class="staff-d"${histOpen.has(d.id) ? " open" : ""}><summary><div class="staff-row">${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", d.streak || 0, shirtOf(d))}
         <div class="nm"><span class="dot" style="background:${esc(d.color)};width:10px;height:10px;margin-right:6px;border:none;box-shadow:none"></span>${esc(d.name)}<small>${esc(d.job)} ・ ${STAGES[d.stage || 0]} ・ ${status}</small>${streakTag(d)}</div>
         <span class="pill ${sc === null ? "warn" : tone(sc)}">${sc === null ? "−" : sc}</span></div></summary>
         <div class="staff-detail">
@@ -1339,7 +1356,7 @@ body.has-live .toast { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
       let rank = 0, prev = null;
       const lines = rows.map(({ d, h }, i) => { if (h.s !== prev) { rank = i + 1; prev = h.s; }
         const its = (h.items || []).map(rowOf).map(([n, pt, v]) => `<div class="kv"><span>${esc(n)}（${pt}点）</span><span>${v}回 = ${r1(pt * v)}点</span></div>`).join("") || `<p class="sub">内訳の記録はありません。</p>`;
-        return `<details class="staff-d"><summary><div class="staff-row ranked"><span class="rank">${rank}</span>${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d")}
+        return `<details class="staff-d"><summary><div class="staff-row ranked"><span class="rank">${rank}</span>${dragonSVG(d.stage || 0, d.color || COLORS[0], "mini-d", 0, shirtOf(d))}
           <div class="nm">${esc(d.name)}<small>${esc(d.job)}${h.res ? " ・ 課題" + RES[h.res] : ""}</small></div><span class="pill ${tone(h.s)}">${h.s}</span></div></summary>
           <div class="staff-detail">${its}</div></details>`; }).join("");
       const hit = rows.filter(x => x.h.s >= 100).length;
